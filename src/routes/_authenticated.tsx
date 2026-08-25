@@ -1,4 +1,5 @@
 import { BrandMark } from "@/components/BrandMark";
+import { WorkflowAgentSidebar } from "@/components/agent/WorkflowAgentSidebar";
 import {
   createFileRoute,
   Outlet,
@@ -130,7 +131,7 @@ function AuthLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto flex max-w-[1400px]">
+      <div className="mx-auto flex max-w-[1720px]">
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-border bg-surface px-4 py-6 md:flex">
           <Link to="/dashboard" className="mb-6 flex items-center gap-2 px-2">
             <BrandMark className="h-8 w-8 rounded-lg" />
@@ -387,9 +388,11 @@ function AuthLayout() {
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 px-4 py-6 md:px-10 md:py-10">
+        <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">
           {locked ? <PrivateBeta /> : <Outlet />}
         </main>
+
+        <WorkflowAgentSidebar />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 {
   "name": "Echo Your Influence",
   "description": "Personal marketing agency in a box — plan, create, schedule, and post content across channels.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

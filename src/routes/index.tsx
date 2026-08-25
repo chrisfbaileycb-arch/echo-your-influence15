@@ -9,6 +9,9 @@ import {
   Image as ImageIcon,
   LayoutGrid,
   Megaphone,
+  Clock,
+  ShieldCheck,
+  Building2,
 } from "lucide-react";
 import { PublicNav } from "@/components/PublicNav";
 import { PublicFooter } from "@/components/PublicFooter";
@@ -213,128 +216,75 @@ function Landing() {
             </p>
           </div>
 
-          {/* Right side: 9:16 Video Mockup Frame + Floating Draft Card Overlay */}
+          {/* Right side: Clean Feature Card List */}
           <div className="relative mx-auto w-full max-w-md lg:max-w-none">
             {/* Soft decorative glow backdrops */}
             <div
-              className="absolute -right-4 -top-6 h-32 w-32 rounded-3xl bg-indigo-400/20 blur-xl animate-floaty"
+              className="pointer-events-none absolute -right-4 -top-6 h-32 w-32 rounded-3xl bg-indigo-400/15 blur-xl"
               aria-hidden="true"
             />
             <div
-              className="absolute -bottom-8 -left-4 h-28 w-28 rounded-3xl bg-rose-400/20 blur-xl animate-floaty-slow"
+              className="pointer-events-none absolute -bottom-8 -left-4 h-28 w-28 rounded-3xl bg-rose-400/15 blur-xl"
               aria-hidden="true"
             />
 
-            <div className="relative flex justify-center">
-              {/* Vertical 9:16 interactive/video mockup frame */}
-              <div className="relative aspect-[9/16] w-[280px] sm:w-[310px] overflow-hidden rounded-[2.5rem] border-[6px] border-slate-900 bg-slate-950 text-white shadow-2xl shadow-indigo-500/20 glow-indigo">
-                {/* Phone Notch & Top Status Bar */}
-                <div className="absolute top-2 left-1/2 z-30 h-4 w-24 -translate-x-1/2 rounded-full bg-slate-900 flex items-center justify-center">
-                  <div className="h-2 w-2 rounded-full bg-slate-800" />
-                </div>
-
-                {/* Embedded Live Video Player */}
-                <video
-                  src="/assets/hero-video.mp4"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="absolute inset-0 z-0 h-full w-full object-cover"
-                />
-
-                {/* iPhone Camera Viewfinder & UGC Creator Overlay */}
-                <div className="relative z-10 h-full flex flex-col justify-between p-3.5 pt-9 bg-gradient-to-b from-black/60 via-transparent to-black/80">
-                  {/* Top Bar: Camera HUD + Mode Badge */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 rounded-full bg-black/60 backdrop-blur-md px-2.5 py-1 border border-white/10">
-                      <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                      <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-amber-300">
-                        CAMERA · 4K
-                      </span>
-                    </div>
-                    <span className="rounded-full bg-rose-500/90 backdrop-blur-md px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-wider text-white shadow">
-                      UGC CREATOR
-                    </span>
+            <div className="relative space-y-4">
+              {/* Card 1: Automated Content Scheduling */}
+              <div
+                data-testid="hero-feature-card-1"
+                className="group rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur-md transition-all hover:border-indigo-300 hover:shadow-md"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">
+                    <Clock className="h-6 w-6" />
                   </div>
-
-                  {/* Center Camera Focus Frame simulation */}
-                  <div className="my-auto flex flex-col items-center justify-center text-center">
-                    <div className="relative h-24 w-24 rounded-2xl border border-amber-400/50 bg-amber-400/5 backdrop-blur-[2px] flex items-center justify-center">
-                      <div className="absolute top-0 left-0 h-2 w-2 border-t-2 border-l-2 border-amber-400" />
-                      <div className="absolute top-0 right-0 h-2 w-2 border-t-2 border-r-2 border-amber-400" />
-                      <div className="absolute bottom-0 left-0 h-2 w-2 border-b-2 border-l-2 border-amber-400" />
-                      <div className="absolute bottom-0 right-0 h-2 w-2 border-b-2 border-r-2 border-amber-400" />
-                      <span className="rounded bg-amber-400/90 px-1.5 py-0.5 font-mono text-[8px] font-bold text-slate-950 uppercase">
-                        1x
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Bottom Subtitles & Camera Mode HUD */}
-                  <div className="space-y-2 pb-1">
-                    <div className="rounded-xl bg-slate-900/90 backdrop-blur-md p-2.5 border border-white/10 shadow-lg">
-                      <p className="font-mono text-[9px] uppercase tracking-wider text-amber-300 font-bold">
-                        Hook & Caption
-                      </p>
-                      <p className="mt-0.5 text-xs font-semibold leading-snug text-white">
-                        &ldquo;3 menu items you have to try this weekend.&rdquo;
-                      </p>
-                    </div>
-
-                    {/* Camera Modes Bar */}
-                    <div className="flex items-center justify-center gap-3 font-mono text-[9px] font-bold tracking-widest text-white/70 pt-0.5">
-                      <span>CINEMATIC</span>
-                      <span className="text-amber-300 font-extrabold">VIDEO</span>
-                      <span>PHOTO</span>
-                      <span>PORTRAIT</span>
-                    </div>
+                  <div>
+                    <h3 className="font-display text-lg uppercase text-slate-900">
+                      Automated Content Scheduling
+                    </h3>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                      Auto-format videos for TikTok, Reels, &amp; Shorts.
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* FLOATING GLASSMORPHISM CARD: Tuesday Post 1 draft card (30% smaller, overlay bottom corner) */}
-              <div className="absolute -bottom-6 -left-4 sm:-left-8 z-20 w-[220px] rounded-2xl border border-white/80 bg-white/85 p-3.5 shadow-2xl shadow-slate-900/15 backdrop-blur-xl transition-transform hover:scale-105">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <BrandMark className="h-6 w-6 shrink-0" />
-                    <p className="truncate font-display text-xs uppercase tracking-wide text-slate-900">
-                      Tuesday · post 1
+              {/* Card 2: Zero Password Sharing */}
+              <div
+                data-testid="hero-feature-card-2"
+                className="group rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur-md transition-all hover:border-rose-300 hover:shadow-md"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-rose-50 text-rose-600 border border-rose-100 shadow-sm">
+                    <ShieldCheck className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-lg uppercase text-slate-900">
+                      Zero Password Sharing
+                    </h3>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                      Safe, API-based social publishing.
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-slate-600">
-                    Draft
-                  </span>
                 </div>
+              </div>
 
-                <div className="mt-2.5 space-y-2 text-xs">
-                  <div className="rounded-lg bg-slate-50/90 p-2 border border-slate-100">
-                    <p className="font-mono text-[9px] uppercase tracking-wider text-slate-400 font-bold">
-                      Hook
-                    </p>
-                    <p className="mt-0.5 font-medium leading-tight text-slate-800 text-[11px]">
-                      &ldquo;3 menu items you have to try this weekend.&rdquo;
-                    </p>
+              {/* Card 3: Local Business Optimization */}
+              <div
+                data-testid="hero-feature-card-3"
+                className="group rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur-md transition-all hover:border-emerald-300 hover:shadow-md"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm">
+                    <Building2 className="h-6 w-6" />
                   </div>
-
-                  <div className="flex items-center justify-between gap-1 text-[10px] font-mono text-indigo-600">
-                    <span className="rounded bg-indigo-50 px-1.5 py-0.5 font-semibold">
-                      9:16 Short
-                    </span>
-                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-500 font-semibold">
-                      1:1 Feed
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {["Copy", "Open TikTok", "Posted"].map((a) => (
-                      <span
-                        key={a}
-                        className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-medium text-slate-700"
-                      >
-                        {a}
-                      </span>
-                    ))}
+                  <div>
+                    <h3 className="font-display text-lg uppercase text-slate-900">
+                      Local Business Optimization
+                    </h3>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                      Pre-built campaign templates for food, retail, &amp; services.
+                    </p>
                   </div>
                 </div>
               </div>
