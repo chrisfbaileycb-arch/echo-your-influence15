@@ -103,7 +103,7 @@ class CloudAuthClient {
           id: user.id,
           email: user.email,
           created_at: new Date().toISOString(),
-        } as any);
+        } as unknown as Record<string, unknown>);
       }
       this.notify("SIGNED_IN");
       return { data: { user, session }, error: null };
@@ -234,12 +234,15 @@ export class ClientQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
       | ((value: { data: R[] | R | null; error: Error | null }) => TResult1 | PromiseLike<TResult1>)
       | undefined
       | null,
-    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | undefined | null,
   ): Promise<TResult1 | TResult2> {
-    return this.execute().then(onfulfilled as any, onrejected);
+    return this.execute().then(
+      onfulfilled as unknown as (value: { data: unknown; error: Error | null }) => TResult1,
+      onrejected,
+    );
   }
 
-  private async execute(): Promise<{ data: any; error: Error | null }> {
+  private async execute(): Promise<{ data: unknown; error: Error | null }> {
     try {
       // Attempt to communicate with /api/cloud/data/:table
       if (typeof window !== "undefined" && typeof fetch !== "undefined") {
@@ -266,7 +269,7 @@ export class ClientQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
               // Cache to IndexedDB / localStorage for offline resilience
               localDB.bulkPut(this.table as string, data);
             } else if (data && typeof data === "object" && "id" in data) {
-              localDB.put(this.table as string, data as any);
+              localDB.put(this.table as string, data as Record<string, unknown>);
             }
 
             if (this.isSingle) {
@@ -283,18 +286,18 @@ export class ClientQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
       }
 
       // Offline / Preview Failover using localDB
-      let localItems = (await localDB.getAll<any>(this.table as string)) || [];
+      let localItems = (await localDB.getAll<Record<string, unknown>>(this.table as string)) || [];
 
       if (this.mutation?.type === "insert") {
         const payload = Array.isArray(this.mutation.payload)
           ? this.mutation.payload
           : [this.mutation.payload];
-        const inserted: any[] = [];
-        for (const item of payload) {
+        const inserted: Record<string, unknown>[] = [];
+        for (const raw of payload as Record<string, unknown>[]) {
           const withId = {
-            id: item.id || `local_${Math.random().toString(36).substring(2, 9)}`,
+            id: raw.id || `local_${Math.random().toString(36).substring(2, 9)}`,
             created_at: new Date().toISOString(),
-            ...item,
+            ...raw,
           };
           await localDB.put(this.table as string, withId);
           inserted.push(withId);
@@ -304,7 +307,7 @@ export class ClientQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
 
       if (this.mutation?.type === "update") {
         const payload = this.mutation.payload as Record<string, unknown>;
-        const updated: any[] = [];
+        const updated: Record<string, unknown>[] = [];
         for (const item of localItems) {
           let match = true;
           for (const f of this.filters) {
@@ -326,7 +329,7 @@ export class ClientQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
             if (f.operator === "eq" && item[f.field] !== f.value) match = false;
           }
           if (match && item.id) {
-            await localDB.delete(this.table as string, item.id);
+            await localDB.delete(this.table as string, item.id as string);
           }
         }
         return { data: { ok: true }, error: null };
@@ -337,7 +340,7 @@ export class ClientQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
         if (f.operator === "eq") {
           localItems = localItems.filter((i) => i[f.field] === f.value);
         } else if (f.operator === "in" && Array.isArray(f.value)) {
-          localItems = localItems.filter((i) => (f.value as any[]).includes(i[f.field]));
+          localItems = localItems.filter((i) => (f.value as unknown[]).includes(i[f.field]));
         }
       }
 
@@ -364,10 +367,10 @@ export class GoogleCloudClient {
     };
   }
 
-  async rpc(
+  async rpc<TResult = unknown>(
     name: string,
     args: Record<string, unknown> = {},
-  ): Promise<{ data: any; error: Error | null }> {
+  ): Promise<{ data: TResult | null; error: Error | null }> {
     try {
       if (typeof window !== "undefined" && typeof fetch !== "undefined") {
         const session = await this.auth.getSession();

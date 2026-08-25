@@ -52,8 +52,8 @@ export const Route = createFileRoute("/api/cloud/data/$table")({
           const table = params.table as TableName;
           const body = (await request.json()) as {
             action?: "insert" | "update" | "delete" | "upsert";
-            payload?: any;
-            filters?: Array<{ field: string; operator: string; value: any }>;
+            payload?: unknown;
+            filters?: Array<{ field: string; operator: string; value: unknown }>;
           };
 
           const action = body.action || "insert";

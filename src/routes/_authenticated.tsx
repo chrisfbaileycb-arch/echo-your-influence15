@@ -1,5 +1,6 @@
 import { BrandMark } from "@/components/BrandMark";
-import { WorkflowAgentSidebar } from "@/components/agent/WorkflowAgentSidebar";
+import { CaptainEchoSidebar } from "@/components/agent/CaptainEchoSidebar";
+import { EchoCaptainCharacter } from "@/components/agent/EchoCaptainCharacter";
 import {
   createFileRoute,
   Outlet,
@@ -33,6 +34,9 @@ import {
   LayoutList,
   ChevronDown,
   ChevronRight,
+  Menu,
+  X,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -98,6 +102,12 @@ function AuthLayout() {
     if (session === null) navigate({ to: "/auth" });
   }, [session, navigate]);
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
   if (session === undefined) {
     return (
       <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">
@@ -117,8 +127,211 @@ function AuthLayout() {
   const currentPlatform = currentSearch.get("platform") || "all";
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto flex max-w-[1720px]">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Mobile Top Header */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-surface px-4 py-3 md:hidden">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setMobileMenuOpen((o) => !o)}
+            className="rounded-lg p-1.5 text-foreground hover:bg-card border border-border"
+            title="Toggle Navigation Menu"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+          <Link to="/dashboard" className="flex items-center gap-2">
+            <BrandMark className="h-7 w-7 rounded-md" />
+            <span className="font-display text-base font-bold">Echo</span>
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {gate.data?.badge ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-foreground border border-primary/20">
+              <Sparkles className="h-2.5 w-2.5" />
+              <span>{gate.data.badge}</span>
+            </span>
+          ) : null}
+        </div>
+      </header>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 top-[57px] z-40 bg-background/95 backdrop-blur-sm p-4 overflow-y-auto md:hidden animate-in fade-in duration-150">
+          <nav className="space-y-1.5">
+            <Link
+              to="/dashboard"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                pathname === "/dashboard"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <LayoutDashboard className="h-4 w-4" /> Dashboard
+            </Link>
+
+            <Link
+              to="/intake"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                pathname === "/intake"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <ClipboardList className="h-4 w-4" /> What you're selling
+            </Link>
+
+            <Link
+              to="/strategy"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                pathname === "/strategy"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <Target className="h-4 w-4" /> Strategy
+            </Link>
+
+            <Link
+              to="/plan"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                pathname === "/plan"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <PieChart className="h-4 w-4" /> Budget & channels
+            </Link>
+
+            <Link
+              to="/content"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                isContentActive
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <LayoutList className="h-4 w-4" /> Content
+            </Link>
+
+            <Link
+              to="/products"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                pathname === "/products"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <Package className="h-4 w-4" /> Products
+            </Link>
+
+            <Link
+              to="/personas"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                pathname === "/personas"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <Users className="h-4 w-4" /> Personas
+            </Link>
+
+            <Link
+              to="/studio"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                pathname === "/studio"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <Wand2 className="h-4 w-4" /> Studio
+            </Link>
+
+            <Link
+              to="/videos"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                pathname === "/videos"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <Video className="h-4 w-4" /> Videos
+            </Link>
+
+            <Link
+              to="/calendar"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                pathname === "/calendar"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <CalendarDays className="h-4 w-4" /> Calendar
+            </Link>
+
+            <Link
+              to="/affiliate-programs"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                pathname === "/affiliate-programs"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <BadgeDollarSign className="h-4 w-4" /> Affiliate IDs
+            </Link>
+
+            <Link
+              to="/settings/integrations"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                pathname === "/settings/integrations"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <Plug className="h-4 w-4" /> Integrations
+            </Link>
+
+            <Link
+              to="/billing"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                pathname === "/billing"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <CreditCard className="h-4 w-4" /> Billing
+            </Link>
+          </nav>
+
+          <div className="mt-6 pt-4 border-t border-border space-y-2 text-xs">
+            <p className="text-muted-foreground">{session.user.email}</p>
+            <button
+              onClick={async () => {
+                await cloudAuth.signOut();
+                setSession(null);
+                navigate({ to: "/auth" });
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-foreground/80 hover:bg-card"
+            >
+              <LogOut className="h-4 w-4" /> Sign out
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="mx-auto flex w-full max-w-[1720px] flex-1">
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-border bg-surface px-4 py-6 md:flex">
           <Link to="/dashboard" className="mb-6 flex items-center gap-2 px-2">
             <BrandMark className="h-8 w-8 rounded-lg" />
@@ -372,7 +585,7 @@ function AuthLayout() {
           {locked ? <PrivateBeta /> : <Outlet />}
         </main>
 
-        <WorkflowAgentSidebar />
+        <CaptainEchoSidebar />
       </div>
     </div>
   );

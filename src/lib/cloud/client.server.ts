@@ -95,12 +95,15 @@ export class ServerQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
       | ((value: { data: R[] | R | null; error: Error | null }) => TResult1 | PromiseLike<TResult1>)
       | undefined
       | null,
-    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | undefined | null,
   ): Promise<TResult1 | TResult2> {
-    return this.execute().then(onfulfilled as any, onrejected);
+    return this.execute().then(
+      onfulfilled as unknown as (value: { data: unknown; error: Error | null }) => TResult1,
+      onrejected,
+    );
   }
 
-  private applyFilters(items: any[]): any[] {
+  private applyFilters(items: Record<string, unknown>[]): Record<string, unknown>[] {
     return items.filter((item) => {
       for (const f of this.filters) {
         const itemVal = item[f.field];
@@ -108,16 +111,16 @@ export class ServerQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
         if (f.operator === "neq" && itemVal === f.value) return false;
         if (f.operator === "in" && Array.isArray(f.value) && !f.value.includes(itemVal))
           return false;
-        if (f.operator === "gt" && !(itemVal > (f.value as any))) return false;
-        if (f.operator === "gte" && !(itemVal >= (f.value as any))) return false;
-        if (f.operator === "lt" && !(itemVal < (f.value as any))) return false;
-        if (f.operator === "lte" && !(itemVal <= (f.value as any))) return false;
+        if (f.operator === "gt" && !(Number(itemVal) > Number(f.value))) return false;
+        if (f.operator === "gte" && !(Number(itemVal) >= Number(f.value))) return false;
+        if (f.operator === "lt" && !(Number(itemVal) < Number(f.value))) return false;
+        if (f.operator === "lte" && !(Number(itemVal) <= Number(f.value))) return false;
       }
       return true;
     });
   }
 
-  private applyJoins(items: any[]): any[] {
+  private applyJoins(items: Record<string, unknown>[]): Record<string, unknown>[] {
     if (!this.selectFields) return items;
 
     // Expand joins if select includes relations like products(*) or personas(*)
@@ -138,9 +141,9 @@ export class ServerQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
     return items;
   }
 
-  private async execute(): Promise<{ data: any; error: Error | null }> {
+  private async execute(): Promise<{ data: unknown; error: Error | null }> {
     try {
-      let items = [...cloudStore.getCollection(this.table)];
+      let items = [...cloudStore.getCollection(this.table)] as Record<string, unknown>[];
 
       // 1. Mutation: INSERT
       if (this.mutation?.type === "insert") {
@@ -148,8 +151,8 @@ export class ServerQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
           ? this.mutation.payload
           : [this.mutation.payload];
 
-        const insertedItems: any[] = [];
-        for (const raw of payload) {
+        const insertedItems: Record<string, unknown>[] = [];
+        for (const raw of payload as Record<string, unknown>[]) {
           const item = {
             id: raw.id || crypto.randomUUID(),
             created_at: raw.created_at || new Date().toISOString(),
@@ -159,7 +162,7 @@ export class ServerQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
           items.push(item);
           insertedItems.push(item);
         }
-        cloudStore.setCollection(this.table, items);
+        cloudStore.setCollection(this.table, items as unknown as Array<DatabaseSchema[T]>);
 
         if (this.isSingle || this.isMaybeSingle) {
           return { data: insertedItems[0] || null, error: null };
@@ -174,7 +177,7 @@ export class ServerQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
       if (this.mutation?.type === "update") {
         const updateData = (this.mutation.payload || {}) as Record<string, unknown>;
         let updatedCount = 0;
-        const updatedList: any[] = [];
+        const updatedList: Record<string, unknown>[] = [];
 
         items = items.map((item) => {
           let match = true;
@@ -282,13 +285,13 @@ export class GoogleCloudAdminClient {
     };
   }
 
-  async rpc(
+  async rpc<TResult = unknown>(
     name: string,
     args: Record<string, unknown> = {},
-  ): Promise<{ data: any; error: Error | null }> {
+  ): Promise<{ data: TResult | null; error: Error | null }> {
     try {
       const result = await cloudStore.executeRpc(name, args);
-      return { data: result, error: null };
+      return { data: result as TResult, error: null };
     } catch (err) {
       return { data: null, error: err as Error };
     }
@@ -306,7 +309,7 @@ export class GoogleCloudAdminClient {
             const dataUrl =
               typeof fileBody === "string" && fileBody.startsWith("data:")
                 ? fileBody
-                : `data:${options?.contentType || "application/octet-stream"};base64,${Buffer.from(fileBody as any).toString("base64")}`;
+                : `data:${options?.contentType || "application/octet-stream"};base64,${Buffer.from(fileBody as ArrayBuffer).toString("base64")}`;
             cloudStore.putStorage(bucket, filePath, {
               name: filePath.split("/").pop() || "file",
               bucket,

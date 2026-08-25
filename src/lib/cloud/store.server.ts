@@ -129,7 +129,7 @@ class CloudStoreManager {
 
   setCollection<T extends TableName>(table: T, items: Array<DatabaseSchema[T]>): void {
     this.load();
-    this.store.collections[table] = items as any;
+    this.store.collections[table] = items as unknown as Array<Record<string, unknown>>;
     this.persist();
   }
 

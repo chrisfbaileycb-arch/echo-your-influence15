@@ -9,12 +9,15 @@ export const Route = createFileRoute("/api/cloud/functions/$task")({
       POST: async ({ params, request }) => {
         try {
           const taskName = params.task;
-          const body = (await request.json().catch(() => ({}))) as any;
+          const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 
           // Special RPC routing
           if (taskName === "rpc") {
             const { rpc, args } = body;
-            const result = await cloudAdmin.rpc(rpc, args);
+            const result = await cloudAdmin.rpc(
+              rpc as string,
+              (args as Record<string, unknown>) || {},
+            );
             return new Response(JSON.stringify(result), {
               headers: { "Content-Type": "application/json" },
             });
@@ -22,10 +25,10 @@ export const Route = createFileRoute("/api/cloud/functions/$task")({
 
           // Autonomous agent ADK execution
           const adkPayload: ADKTaskPayload = {
-            task: (taskName as any) || "adk_execute",
-            userId: body.userId,
-            orgId: body.orgId,
-            parameters: body.parameters || body,
+            task: (taskName as ADKTaskPayload["task"]) || "adk_execute",
+            userId: body.userId as string | undefined,
+            orgId: body.orgId as string | undefined,
+            parameters: (body.parameters as Record<string, unknown>) || body,
           };
 
           const result = await cloudADK.executeTask(adkPayload);
