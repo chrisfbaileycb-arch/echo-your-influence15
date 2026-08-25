@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { PLAN_LIMITS, TIER_LABEL, tierFromLookupKey, type TierId } from "@/lib/plans";
 
@@ -36,7 +36,7 @@ async function resolveOrCreateCustomer(
 }
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: { priceId: string; returnUrl: string; environment: StripeEnv }) => {
     if (!/^[a-zA-Z0-9_-]+$/.test(d.priceId)) throw new Error("Invalid priceId");
     return d;
@@ -78,7 +78,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
   });
 
 export const createPortalSession = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: { returnUrl: string; environment: StripeEnv }) => d)
   .handler(async ({ data, context }): Promise<{ url: string } | { error: string }> => {
     try {
@@ -100,7 +100,7 @@ export const createPortalSession = createServerFn({ method: "POST" })
   });
 
 export const getMySubscription = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const pstart = new Date();
@@ -140,7 +140,7 @@ export const getMySubscription = createServerFn({ method: "GET" })
   });
 
 export const syncSubscriptionFromStripe = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: { sessionId: string; environment: StripeEnv }) =>
     z
       .object({
@@ -177,7 +177,7 @@ export const syncSubscriptionFromStripe = createServerFn({ method: "POST" })
           ? sub.status
           : "past_due";
 
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { cloudAdmin: supabaseAdmin } = await import("@/lib/cloud/client.server");
       await supabaseAdmin
         .from("subscriptions")
         .update({

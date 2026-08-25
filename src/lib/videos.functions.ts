@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 
 const GenerateInput = z.object({
   product_id: z.string().uuid(),
@@ -168,7 +168,7 @@ async function pollHeygen(videoId: string): Promise<NonNullable<HeyGenStatusResp
 
 /** Status of both engines: HeyGen avatar credits + MiniMax b-roll availability. */
 export const checkVideoProviderStatus = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async () => {
     let avatarRemaining: number | null = null;
     let avatarError: string | null = null;
@@ -197,11 +197,11 @@ export const checkVideoProviderStatus = createServerFn({ method: "GET" })
 /** Shared spend guardrails: kill switch + daily caps. */
 async function assertRenderAllowed(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabaseAdmin: any,
+  cloudAdmin: any,
   userId: string,
   kind: "avatar" | "broll",
 ) {
-  const { data: settings } = await supabaseAdmin
+  const { data: settings } = await cloudAdmin
     .from("app_settings")
     .select(
       "generation_enabled, daily_global_video_cap, per_user_daily_video_cap, per_user_daily_broll_cap, pause_reason",
@@ -218,11 +218,8 @@ async function assertRenderAllowed(
   dayStart.setUTCHours(0, 0, 0, 0);
   const since = dayStart.toISOString();
   const [{ count: globalToday }, { count: userToday }] = await Promise.all([
-    supabaseAdmin
-      .from("videos")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", since),
-    supabaseAdmin
+    cloudAdmin.from("videos").select("id", { count: "exact", head: true }).gte("created_at", since),
+    cloudAdmin
       .from("videos")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
@@ -262,7 +259,7 @@ function quotaError(
 }
 
 export const generateVideo = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => GenerateInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -307,10 +304,10 @@ export const generateVideo = createServerFn({ method: "POST" })
     const avatarId = persona?.heygen_avatar_id || DEFAULT_AVATAR;
     const voiceId = persona?.elevenlabs_voice_id || DEFAULT_VOICE;
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { cloudAdmin } = await import("@/lib/cloud/client.server");
     const { PLAN_REQUIRED_MESSAGE } = await import("@/lib/plans");
 
-    await assertRenderAllowed(supabaseAdmin, userId, "avatar");
+    await assertRenderAllowed(cloudAdmin, userId, "avatar");
 
     const { consumeQuotaUnlessOwner } = await import("@/lib/owner-override.server");
     const { result: qr } = await consumeQuotaUnlessOwner(userId, "consume_video_quota", {
@@ -419,7 +416,7 @@ export const generateVideo = createServerFn({ method: "POST" })
 /* ------------------------------------------------------------------ */
 
 export const generateBRollClip = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => BRollInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -431,13 +428,13 @@ export const generateBRollClip = createServerFn({ method: "POST" })
       .maybeSingle();
     if (pe || !product) throw new Error("Product not found");
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { cloudAdmin } = await import("@/lib/cloud/client.server");
     const { PLAN_REQUIRED_MESSAGE } = await import("@/lib/plans");
 
     if (!process.env["MINIMAX_API_KEY"])
       throw new Error("B-Roll studio is not configured (MINIMAX_API_KEY missing).");
 
-    await assertRenderAllowed(supabaseAdmin, userId, "broll");
+    await assertRenderAllowed(cloudAdmin, userId, "broll");
 
     const { consumeQuotaUnlessOwner } = await import("@/lib/owner-override.server");
     const { result: qr, bypassed: quotaBypassed } = await consumeQuotaUnlessOwner(
@@ -503,13 +500,16 @@ export const generateBRollClip = createServerFn({ method: "POST" })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await patch({ status: "failed", error: message });
-      if (!quotaBypassed) await supabaseAdmin.rpc("release_broll_quota", { _user_id: userId });
+      if (!quotaBypassed) {
+        const { cloudAdmin } = await import("@/lib/cloud/client.server");
+        await cloudAdmin.rpc("release_broll_quota", { _user_id: userId });
+      }
       throw err;
     }
   });
 
 export const listVideos = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("videos")
@@ -523,7 +523,7 @@ export const listVideos = createServerFn({ method: "GET" })
   });
 
 export const getVideoBundle = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
@@ -538,7 +538,7 @@ export const getVideoBundle = createServerFn({ method: "POST" })
   });
 
 export const deleteVideo = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("videos").delete().eq("id", data.id);

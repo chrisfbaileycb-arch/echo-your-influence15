@@ -1,6 +1,6 @@
-// Server-only share-sheet hand-off helpers. Service role, after the caller's
-// identity has been verified by requireSupabaseAuth.
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+// Server-only share-sheet hand-off helpers. Google Cloud backend client, after the caller's
+// identity has been verified by requireCloudAuth.
+import { cloudAdmin as supabaseAdmin } from "@/lib/cloud/client.server";
 import { resolveOrgIdForUser } from "@/lib/integrations/orgs.server";
 
 type PostState =

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 
 const GenerateInput = z.object({
   name: z.string().min(1).max(60),
@@ -76,9 +76,9 @@ async function aiJson(body: Record<string, unknown>): Promise<string> {
 }
 
 export const listPersonas = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    const { data, error } = await context.cloud
       .from("personas")
       .select("*")
       .order("is_default", { ascending: false })
@@ -88,10 +88,10 @@ export const listPersonas = createServerFn({ method: "GET" })
   });
 
 export const generatePersona = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => GenerateInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { cloud, userId } = context;
 
     const content = await aiJson({
       model: "google/gemini-3-flash-preview",
@@ -123,7 +123,7 @@ export const generatePersona = createServerFn({ method: "POST" })
 
     const { avatar, voice } = pickAvatarAndVoice(data);
 
-    const { data: inserted, error } = await supabase
+    const { data: inserted, error } = await cloud
       .from("personas")
       .insert({
         user_id: userId,
@@ -147,24 +147,21 @@ export const generatePersona = createServerFn({ method: "POST" })
   });
 
 export const setDefaultPersona = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    await supabase.from("personas").update({ is_default: false }).eq("user_id", userId);
-    const { error } = await supabase
-      .from("personas")
-      .update({ is_default: true })
-      .eq("id", data.id);
+    const { cloud, userId } = context;
+    await cloud.from("personas").update({ is_default: false }).eq("user_id", userId);
+    const { error } = await cloud.from("personas").update({ is_default: true }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 export const deletePersona = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("personas").delete().eq("id", data.id);
+    const { error } = await context.cloud.from("personas").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudAuth, type CloudSession } from "@/lib/cloud/client";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMySubscription } from "@/lib/billing.functions";
@@ -28,13 +27,13 @@ export const Route = createFileRoute("/_authenticated/upgrade")({
 });
 
 function Pricing() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<CloudSession | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const ms = useServerFn(getMySubscription);
   const subQ = useQuery({ queryKey: ["mySub"], queryFn: () => ms() });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    cloudAuth.getSession().then(({ data }) => setSession(data.session));
   }, []);
 
   if (picked && session) {

@@ -8,7 +8,7 @@ import {
   SKILL_REGISTRY,
 } from "./agent/types";
 import { getSkill, getAllSkills, matchSkillsForPrompt, executeSkillDirectly } from "./agent/skills";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { cloudAdmin as supabaseAdmin } from "@/lib/cloud/client.server";
 
 let genAIClient: GoogleGenAI | null = null;
 

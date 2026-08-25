@@ -1,13 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 
 export const getMyReferralStats = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
+    const { cloud, userId } = context;
     const [profileRes, convsRes] = await Promise.all([
-      supabase.from("profiles").select("referral_code").eq("id", userId).maybeSingle(),
-      supabase
+      cloud.from("profiles").select("referral_code").eq("id", userId).maybeSingle(),
+      cloud
         .from("referral_conversions")
         .select("credited_cents, currency, credited_at, created_at")
         .eq("referrer_id", userId),

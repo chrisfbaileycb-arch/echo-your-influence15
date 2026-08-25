@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 import { newShortCode } from "./short-code";
 
 const ProgramInput = z.object({
@@ -13,9 +13,9 @@ const ProgramInput = z.object({
 });
 
 export const listPrograms = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    const { data, error } = await context.cloud
       .from("affiliate_programs")
       .select("*")
       .order("created_at", { ascending: false });
@@ -24,12 +24,12 @@ export const listPrograms = createServerFn({ method: "GET" })
   });
 
 export const upsertProgram = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => ProgramInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { cloud, userId } = context;
     if (data.id) {
-      const { data: row, error } = await supabase
+      const { data: row, error } = await cloud
         .from("affiliate_programs")
         .update({ ...data, user_id: userId })
         .eq("id", data.id)
@@ -38,7 +38,7 @@ export const upsertProgram = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       return row;
     }
-    const { data: row, error } = await supabase
+    const { data: row, error } = await cloud
       .from("affiliate_programs")
       .insert({ ...data, user_id: userId })
       .select()
@@ -48,10 +48,10 @@ export const upsertProgram = createServerFn({ method: "POST" })
   });
 
 export const deleteProgram = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("affiliate_programs").delete().eq("id", data.id);
+    const { error } = await context.cloud.from("affiliate_programs").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -65,7 +65,7 @@ function applyTemplate(template: string, productUrl: string, trackingId: string)
 }
 
 export const createShortLink = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -75,8 +75,8 @@ export const createShortLink = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: product, error: pe } = await supabase
+    const { cloud, userId } = context;
+    const { data: product, error: pe } = await cloud
       .from("products")
       .select("source_url")
       .eq("id", data.product_id)
@@ -85,7 +85,7 @@ export const createShortLink = createServerFn({ method: "POST" })
 
     let destination = product.source_url;
     if (data.affiliate_program_id) {
-      const { data: prog } = await supabase
+      const { data: prog } = await cloud
         .from("affiliate_programs")
         .select("link_template, tracking_id")
         .eq("id", data.affiliate_program_id)
@@ -95,7 +95,7 @@ export const createShortLink = createServerFn({ method: "POST" })
     }
 
     const short_code = newShortCode();
-    const { data: row, error } = await supabase
+    const { data: row, error } = await cloud
       .from("affiliate_links")
       .insert({
         user_id: userId,
@@ -111,10 +111,10 @@ export const createShortLink = createServerFn({ method: "POST" })
   });
 
 export const listLinksForProduct = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ product_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
+    const { data: rows, error } = await context.cloud
       .from("affiliate_links")
       .select("*")
       .eq("product_id", data.product_id)

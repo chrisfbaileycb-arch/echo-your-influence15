@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 
 /**
  * Apollo server functions. Every one of these:
@@ -26,7 +26,7 @@ export type TestStep = (typeof REQUIRED_TEST_STEPS)[number];
 async function ctx(userId: string) {
   const { assertCustomerZero } = await import("@/lib/customer-zero.server");
   const { resolveOrgIdForUser } = await import("@/lib/integrations/orgs.server");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { cloudAdmin: supabaseAdmin } = await import("@/lib/cloud/client.server");
   await assertCustomerZero(userId);
   const orgId = await resolveOrgIdForUser(userId);
   return { orgId, db: supabaseAdmin };
@@ -38,7 +38,7 @@ async function recordStep(
   status: "passed" | "failed",
   detail: string,
 ) {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { cloudAdmin: supabaseAdmin } = await import("@/lib/cloud/client.server");
   await supabaseAdmin
     .from("integration_test_runs")
     .insert({ org_id: orgId, provider: "apollo", step, status, detail: detail.slice(0, 500) });
@@ -51,7 +51,7 @@ function describe(err: unknown): string {
 // --- Validation -------------------------------------------------------------
 
 export const validateApolloCredential = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
     const { orgId, db } = await ctx(context.userId);
     const apollo = await import("@/lib/outbound/apollo.server");
@@ -104,7 +104,7 @@ export const validateApolloCredential = createServerFn({ method: "POST" })
   });
 
 export const probeApolloCapabilities = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
     const { orgId } = await ctx(context.userId);
     const apollo = await import("@/lib/outbound/apollo.server");
@@ -118,7 +118,7 @@ export const probeApolloCapabilities = createServerFn({ method: "POST" })
 
 /** Apollo status. "working" is derived from the test-run table only. */
 export const getApolloStatus = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
     const { orgId, db } = await ctx(context.userId);
     const [{ data: cred }, { data: runs }] = await Promise.all([
@@ -177,7 +177,7 @@ const FiltersSchema = z.object({
 });
 
 export const saveOutboundFilters = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z.object({ workflow_id: z.string().uuid(), filters: FiltersSchema }).parse(d),
   )
@@ -194,7 +194,7 @@ export const saveOutboundFilters = createServerFn({ method: "POST" })
 
 /** Zero-credit preview. Nothing is persisted, no emails are returned by Apollo. */
 export const previewApolloSearch = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ filters: FiltersSchema }).parse(d))
   .handler(async ({ data, context }) => {
     const { orgId } = await ctx(context.userId);
@@ -217,7 +217,7 @@ export const previewApolloSearch = createServerFn({ method: "POST" })
 
 /** Persists search results as leads. Repeat searches update, never duplicate. */
 export const sourceLeads = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -323,7 +323,7 @@ export const sourceLeads = createServerFn({ method: "POST" })
   });
 
 export const qualifyLeads = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { orgId, db } = await ctx(context.userId);
@@ -378,7 +378,7 @@ export const qualifyLeads = createServerFn({ method: "POST" })
 
 /** Credit-consuming. Requires explicit confirmation from the UI. */
 export const enrichLeads = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -454,7 +454,7 @@ export const enrichLeads = createServerFn({ method: "POST" })
 // --- Sequences, contacts, enrollment ---------------------------------------
 
 export const saveSequenceDraft = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -522,7 +522,7 @@ export const saveSequenceDraft = createServerFn({ method: "POST" })
   });
 
 export const generateSequenceCopy = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { orgId, db } = await ctx(context.userId);
@@ -561,7 +561,7 @@ export const generateSequenceCopy = createServerFn({ method: "POST" })
   });
 
 export const listApolloSendingOptions = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
     const { orgId } = await ctx(context.userId);
     const apollo = await import("@/lib/outbound/apollo.server");
@@ -579,7 +579,7 @@ export const listApolloSendingOptions = createServerFn({ method: "POST" })
 
 /** Pushes the locally-saved sequence to Apollo, inactive by default. */
 export const pushSequenceToApollo = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -641,7 +641,7 @@ export const pushSequenceToApollo = createServerFn({ method: "POST" })
  * Enrollments are recorded paused; nothing is sent without a final confirm.
  */
 export const enrollLeads = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -772,7 +772,7 @@ export const enrollLeads = createServerFn({ method: "POST" })
   });
 
 export const setSendingPaused = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z.object({ workflow_id: z.string().uuid(), paused: z.boolean() }).parse(d),
   )

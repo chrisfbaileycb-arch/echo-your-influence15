@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 
 const RatioEnum = z.enum(["1:1", "9:16", "16:9"]);
 
@@ -11,15 +11,15 @@ const GenerateInput = z.object({
 });
 
 export const generateAdImage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => GenerateInput.parse(d))
   .handler(async ({ data, context }) => {
     const { buildAdPrompt, renderAdImage, RATIO_SIZE } = await import("@/lib/ad-images.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { cloudAdmin } = await import("@/lib/cloud/client.server");
     const { PLAN_REQUIRED_MESSAGE } = await import("@/lib/plans");
-    const { supabase, userId } = context;
+    const { cloud, userId } = context;
 
-    const { data: product, error: pe } = await supabase
+    const { data: product, error: pe } = await cloud
       .from("products")
       .select("title, description, price, currency, source_domain, asset_kind")
       .eq("id", data.product_id)
@@ -47,7 +47,7 @@ export const generateAdImage = createServerFn({ method: "POST" })
     }
 
     try {
-      const { data: persona } = await supabase
+      const { data: persona } = await cloud
         .from("personas")
         .select("name, vibe, voice_tone, bio")
         .eq("is_default", true)
@@ -60,12 +60,12 @@ export const generateAdImage = createServerFn({ method: "POST" })
       const bytes = await renderAdImage(prompt, data.ratio);
 
       const path = `${userId}/${crypto.randomUUID()}.png`;
-      const { error: ue } = await supabase.storage
+      const { error: ue } = await cloud.storage
         .from("ad-images")
         .upload(path, bytes, { contentType: "image/png", upsert: false });
       if (ue) throw new Error(`Upload failed: ${ue.message}`);
 
-      const { data: row, error: ie } = await supabase
+      const { data: row, error: ie } = await cloud
         .from("ad_images")
         .insert({
           user_id: userId,
@@ -79,23 +79,23 @@ export const generateAdImage = createServerFn({ method: "POST" })
         .single();
       if (ie || !row) throw new Error(ie?.message ?? "Could not save image record");
 
-      const { data: signed } = await supabase.storage
+      const { data: signed } = await cloud.storage
         .from("ad-images")
         .createSignedUrl(path, 60 * 60 * 24 * 7);
 
       return { ...row, url: signed?.signedUrl ?? null };
     } catch (err) {
       if (!quotaBypassed)
-        await supabaseAdmin.rpc("release_image_quota", { _user_id: userId, _count: 1 });
+        await cloudAdmin.rpc("release_image_quota", { _user_id: userId, _count: 1 });
       throw err;
     }
   });
 
 export const listAdImages = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context;
-    const { data, error } = await context.supabase
+    const { cloud } = context;
+    const { data, error } = await cloud
       .from("ad_images")
       .select("id, ratio, size, prompt, storage_path, created_at, product_id, products(title)")
       .order("created_at", { ascending: false })
@@ -104,7 +104,7 @@ export const listAdImages = createServerFn({ method: "GET" })
     const rows = data ?? [];
     const signed = await Promise.all(
       rows.map(async (r) => {
-        const { data: s } = await supabase.storage
+        const { data: s } = await cloud.storage
           .from("ad-images")
           .createSignedUrl(r.storage_path, 60 * 60 * 24 * 7);
         return { ...r, url: s?.signedUrl ?? null };
@@ -114,17 +114,17 @@ export const listAdImages = createServerFn({ method: "GET" })
   });
 
 export const deleteAdImage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { data: row } = await supabase
+    const { cloud } = context;
+    const { data: row } = await cloud
       .from("ad_images")
       .select("storage_path")
       .eq("id", data.id)
       .maybeSingle();
-    if (row?.storage_path) await supabase.storage.from("ad-images").remove([row.storage_path]);
-    const { error } = await supabase.from("ad_images").delete().eq("id", data.id);
+    if (row?.storage_path) await cloud.storage.from("ad-images").remove([row.storage_path]);
+    const { error } = await cloud.from("ad_images").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

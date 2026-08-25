@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudAuth } from "@/lib/cloud/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,7 +55,7 @@ function ResetPasswordPage() {
 
     setBusy(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await cloudAuth.updateUser({ password });
       if (error) throw error;
       toast.success("Password updated. Signing you in...");
       navigate({ to: "/dashboard" });

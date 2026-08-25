@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 
 export type QueueVariant = {
   id: string;
@@ -44,10 +44,10 @@ const PLATFORMS = ["tiktok", "instagram", "youtube", "linkedin"] as const;
 
 /** Reads only real rows. There is no sample or seeded data behind this. */
 export const getPublishingQueue = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }): Promise<PublishingQueue> => {
     const { resolveOrgIdForUser } = await import("@/lib/integrations/orgs.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { cloudAdmin: supabaseAdmin } = await import("@/lib/cloud/client.server");
 
     const orgId = await resolveOrgIdForUser(context.userId);
 
@@ -90,7 +90,7 @@ export const getPublishingQueue = createServerFn({ method: "GET" })
 
 /** Creates a post plus one variant per platform from an existing campaign. */
 export const queueCampaignForPublishing = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -109,7 +109,7 @@ export const queueCampaignForPublishing = createServerFn({ method: "POST" })
 const variantInput = z.object({ variant_id: z.string().uuid() });
 
 export const recordCaptionCopied = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => variantInput.parse(d))
   .handler(async ({ data, context }) => {
     const { patchVariant } = await import("@/lib/social/handoff.server");
@@ -121,7 +121,7 @@ export const recordCaptionCopied = createServerFn({ method: "POST" })
 
 /** Only called after navigator.share() RESOLVES. Never means "published". */
 export const recordHandoff = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => variantInput.parse(d))
   .handler(async ({ data, context }) => {
     const { patchVariant } = await import("@/lib/social/handoff.server");
@@ -132,7 +132,7 @@ export const recordHandoff = createServerFn({ method: "POST" })
   });
 
 export const recordShareFailure = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => variantInput.extend({ reason: z.string().max(300) }).parse(d))
   .handler(async ({ data, context }) => {
     const { patchVariant } = await import("@/lib/social/handoff.server");
@@ -145,7 +145,7 @@ export const recordShareFailure = createServerFn({ method: "POST" })
 
 /** Explicit human confirmation. The only path to "Posted". */
 export const markVariantPosted = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     variantInput.extend({ external_post_url: z.string().url().nullable().optional() }).parse(d),
   )
@@ -166,7 +166,7 @@ export const markVariantPosted = createServerFn({ method: "POST" })
   });
 
 export const undoPostConfirmation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => variantInput.parse(d))
   .handler(async ({ data, context }) => {
     const { patchVariant } = await import("@/lib/social/handoff.server");
@@ -184,7 +184,7 @@ export const undoPostConfirmation = createServerFn({ method: "POST" })
   });
 
 export const markVariantSkipped = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => variantInput.parse(d))
   .handler(async ({ data, context }) => {
     const { patchVariant } = await import("@/lib/social/handoff.server");
@@ -196,7 +196,7 @@ export const markVariantSkipped = createServerFn({ method: "POST" })
   });
 
 export const setNotificationPreferences = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -206,7 +206,7 @@ export const setNotificationPreferences = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { cloudAdmin: supabaseAdmin } = await import("@/lib/cloud/client.server");
     const { error } = await supabaseAdmin.from("notification_preferences").upsert(
       {
         user_id: context.userId,

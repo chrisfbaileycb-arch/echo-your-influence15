@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 
 export interface PlatformPlanRow {
   platform: string;
@@ -47,7 +47,7 @@ const STATUS = z.enum(["planned", "prompted", "generated", "queued", "posted"]);
 async function ctx(userId: string) {
   const { assertCustomerZero } = await import("@/lib/customer-zero.server");
   const { resolveOrgIdForUser } = await import("@/lib/integrations/orgs.server");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { cloudAdmin: supabaseAdmin } = await import("@/lib/cloud/client.server");
   await assertCustomerZero(userId);
   const orgId = await resolveOrgIdForUser(userId);
   return { orgId, db: supabaseAdmin };
@@ -67,7 +67,7 @@ function normalize(row: Record<string, unknown>): CalendarSlot {
 
 /** Reads only real rows for the signed-in org. Nothing is seeded. */
 export const listCalendarSlots = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ start: ISO_DATE, end: ISO_DATE }).parse(d))
   .handler(async ({ data, context }): Promise<CalendarSlot[]> => {
     const { orgId, db } = await ctx(context.userId);
@@ -84,7 +84,7 @@ export const listCalendarSlots = createServerFn({ method: "GET" })
   });
 
 export const getDaySlots = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ date: ISO_DATE }).parse(d))
   .handler(async ({ data, context }): Promise<CalendarSlot[]> => {
     const { orgId, db } = await ctx(context.userId);
@@ -99,7 +99,7 @@ export const getDaySlots = createServerFn({ method: "GET" })
   });
 
 export const createCalendarSlot = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -136,7 +136,7 @@ export const createCalendarSlot = createServerFn({ method: "POST" })
   });
 
 export const updateCalendarSlot = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -189,7 +189,7 @@ export const updateCalendarSlot = createServerFn({ method: "POST" })
   });
 
 export const deleteCalendarSlot = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { orgId, db } = await ctx(context.userId);
@@ -204,7 +204,7 @@ export const deleteCalendarSlot = createServerFn({ method: "POST" })
 
 /** Writes prompt fields for one slot using the product + notes already stored. */
 export const generateSlotPrompt = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<CalendarSlot> => {
     const { orgId, db } = await ctx(context.userId);
@@ -284,7 +284,7 @@ export const generateSlotPrompt = createServerFn({ method: "POST" })
   });
 
 export const listCalendarProducts = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(
     async ({
       context,

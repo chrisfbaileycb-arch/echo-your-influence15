@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type Stripe from "stripe";
 import { createStripeClient, getWebhookSecret, type StripeEnv } from "@/lib/stripe.server";
 import { monthlyCentsForTier, tierFromLookupKey, type TierId } from "@/lib/plans";
+import { cloudAdmin } from "@/lib/cloud/client.server";
 
 type PaidTier = Exclude<TierId, "trial">;
 
@@ -12,13 +13,13 @@ function referralCreditCents(tier: PaidTier): number {
 
 async function applyReferralCreditIfEligible(args: {
   stripe: ReturnType<typeof import("@/lib/stripe.server").createStripeClient>;
-  supabaseAdmin: import("@supabase/supabase-js").SupabaseClient;
+  adminClient: typeof cloudAdmin;
   referredUserId: string;
   tier: PaidTier;
 }) {
-  const { stripe, supabaseAdmin, referredUserId, tier } = args;
+  const { stripe, adminClient, referredUserId, tier } = args;
   // Who referred this user?
-  const { data: profile } = await supabaseAdmin
+  const { data: profile } = await adminClient
     .from("profiles")
     .select("referred_by")
     .eq("id", referredUserId)
@@ -27,7 +28,7 @@ async function applyReferralCreditIfEligible(args: {
   if (!referrerId) return;
 
   // Already credited for this referred user?
-  const { data: existing } = await supabaseAdmin
+  const { data: existing } = await adminClient
     .from("referral_conversions")
     .select("id")
     .eq("referred_user_id", referredUserId)
@@ -35,7 +36,7 @@ async function applyReferralCreditIfEligible(args: {
   if (existing) return;
 
   // Find referrer's Stripe customer (must already exist for the balance credit to attach).
-  const { data: refSub } = await supabaseAdmin
+  const { data: refSub } = await adminClient
     .from("subscriptions")
     .select("stripe_customer_id")
     .eq("user_id", referrerId)
@@ -61,7 +62,7 @@ async function applyReferralCreditIfEligible(args: {
     }
   }
 
-  await supabaseAdmin.from("referral_conversions").insert({
+  await adminClient.from("referral_conversions").insert({
     referrer_id: referrerId,
     referred_user_id: referredUserId,
     credited_cents: appliedCents,
@@ -92,8 +93,6 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
         } catch (err) {
           return new Response(`Invalid signature: ${(err as Error).message}`, { status: 400 });
         }
-
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         try {
           if (
@@ -133,7 +132,7 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
                 sub.status === "canceled"
                   ? sub.status
                   : "past_due";
-              await supabaseAdmin
+              await cloudAdmin
                 .from("subscriptions")
                 .update({
                   tier,
@@ -153,7 +152,7 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
               ) {
                 await applyReferralCreditIfEligible({
                   stripe,
-                  supabaseAdmin,
+                  adminClient: cloudAdmin,
                   referredUserId: userId,
                   tier,
                 });
@@ -163,7 +162,7 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
             const sub = event.data.object as Stripe.Subscription;
             const userId = sub.metadata?.userId;
             if (userId) {
-              await supabaseAdmin
+              await cloudAdmin
                 .from("subscriptions")
                 .update({
                   status: "canceled",

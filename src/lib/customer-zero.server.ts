@@ -8,7 +8,7 @@
  *                      When unset, the owner of the oldest organization in the
  *                      project is treated as the owner identity.
  */
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { cloudAdmin } from "@/lib/cloud/client.server";
 
 export function customerZeroEnabled(): boolean {
   const raw = (process.env["CUSTOMER_ZERO_MODE"] ?? "true").trim().toLowerCase();
@@ -26,7 +26,7 @@ let cachedOwnerId: string | null | undefined;
 
 async function projectOwnerId(): Promise<string | null> {
   if (cachedOwnerId !== undefined) return cachedOwnerId;
-  const { data } = await supabaseAdmin
+  const { data } = await cloudAdmin
     .from("organizations")
     .select("owner_id, created_at")
     .order("created_at", { ascending: true })

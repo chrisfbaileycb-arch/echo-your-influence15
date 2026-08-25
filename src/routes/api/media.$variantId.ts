@@ -6,7 +6,7 @@
  * This route re-serves the asset same-origin after verifying the caller owns it.
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
+import { cloudAdmin } from "@/lib/cloud/client.server";
 
 export const Route = createFileRoute("/api/media/$variantId")({
   server: {
@@ -19,12 +19,7 @@ export const Route = createFileRoute("/api/media/$variantId")({
           "";
         if (!token) return new Response("Unauthorized", { status: 401 });
 
-        const supabase = createClient(
-          process.env["SUPABASE_URL"]!,
-          process.env["SUPABASE_PUBLISHABLE_KEY"]!,
-          { auth: { persistSession: false, autoRefreshToken: false } },
-        );
-        const { data, error } = await supabase.auth.getClaims(token);
+        const { data, error } = await cloudAdmin.auth.getClaims(token);
         const userId = data?.claims?.sub;
         if (error || !userId) return new Response("Unauthorized", { status: 401 });
 

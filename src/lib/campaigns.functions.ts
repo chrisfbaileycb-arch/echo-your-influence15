@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 
 export const startCampaign = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -74,7 +74,7 @@ export const startCampaign = createServerFn({ method: "POST" })
   });
 
 export const generateCampaignImage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -87,7 +87,7 @@ export const generateCampaignImage = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { buildAdPrompt, renderAdImage, RATIO_SIZE } = await import("@/lib/ad-images.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { cloudAdmin: supabaseAdmin } = await import("@/lib/cloud/client.server");
     const { PLAN_REQUIRED_MESSAGE } = await import("@/lib/plans");
     const { supabase, userId } = context;
 
@@ -182,7 +182,7 @@ export const generateCampaignImage = createServerFn({ method: "POST" })
   });
 
 export const attachCampaignVideo = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z.object({ campaign_id: z.string().uuid(), video_id: z.string().uuid() }).parse(d),
   )
@@ -196,7 +196,7 @@ export const attachCampaignVideo = createServerFn({ method: "POST" })
   });
 
 export const updateCampaign = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -219,7 +219,7 @@ export const updateCampaign = createServerFn({ method: "POST" })
   });
 
 export const listCampaigns = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("campaigns")
@@ -231,7 +231,7 @@ export const listCampaigns = createServerFn({ method: "GET" })
   });
 
 export const getCampaignKit = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
@@ -262,7 +262,7 @@ export const getCampaignKit = createServerFn({ method: "POST" })
   });
 
 export const deleteCampaign = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("campaigns").delete().eq("id", data.id);

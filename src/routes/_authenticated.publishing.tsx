@@ -19,7 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudAuth } from "@/lib/cloud/client";
 import {
   CAPABILITY_LABEL,
   HANDOFF_NOTICE,
@@ -70,7 +70,7 @@ const PLATFORM_LABEL: Record<string, string> = {
 };
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
+  const { data } = await cloudAuth.getSession();
   const token = data.session?.access_token;
   return token ? { Authorization: `Bearer ${token}` } : {};
 }

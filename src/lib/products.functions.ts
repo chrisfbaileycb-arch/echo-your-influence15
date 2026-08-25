@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 import { suggestNetworkForDomain } from "./affiliate-networks";
 
 /** Kept in sync with CAMPAIGN_MODES in src/lib/campaign-modes.ts (no icon imports on the server). */
@@ -90,10 +90,10 @@ async function extractProductFields(markdown: string, sourceUrl: string) {
 }
 
 export const ingestProduct = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => UrlInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { cloud, userId } = context;
     const domain = new URL(data.url).hostname.replace(/^www\./, "");
 
     const scraped = await firecrawlScrape(data.url);
@@ -101,7 +101,7 @@ export const ingestProduct = createServerFn({ method: "POST" })
     const fields = await extractProductFields(md, data.url);
     const network = suggestNetworkForDomain(domain);
 
-    const { data: row, error } = await supabase
+    const { data: row, error } = await cloud
       .from("products")
       .insert({
         user_id: userId,
@@ -128,7 +128,7 @@ export const ingestProduct = createServerFn({ method: "POST" })
  * details better than any scraper would.
  */
 export const createManualSubject = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -149,7 +149,7 @@ export const createManualSubject = createServerFn({ method: "POST" })
         throw new Error("That link isn't a valid URL. Leave it blank if there isn't one.");
       }
     }
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await context.cloud
       .from("products")
       .insert({
         user_id: context.userId,
@@ -169,9 +169,9 @@ export const createManualSubject = createServerFn({ method: "POST" })
   });
 
 export const listProducts = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    const { data, error } = await context.cloud
       .from("products")
       .select(
         "id, title, source_domain, price, currency, images, created_at, suggested_network, campaign_mode",
@@ -184,10 +184,10 @@ export const listProducts = createServerFn({ method: "GET" })
   });
 
 export const getProduct = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await context.cloud
       .from("products")
       .select("*")
       .eq("id", data.id)
@@ -198,18 +198,18 @@ export const getProduct = createServerFn({ method: "POST" })
   });
 
 export const deleteProduct = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await context.supabase
+    await context.cloud
       .from("product_briefs")
       .update({ product_id: null })
       .eq("product_id", data.id);
-    await context.supabase
+    await context.cloud
       .from("campaign_workflows")
       .update({ product_id: null })
       .eq("product_id", data.id);
-    const { error } = await context.supabase.from("products").delete().eq("id", data.id);
+    const { error } = await context.cloud.from("products").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

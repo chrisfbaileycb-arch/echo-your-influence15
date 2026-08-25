@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 
 /** Owner-visible private beta state. Read-only, safe for any signed-in user. */
 export const getCustomerZeroStatus = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
     const { customerZeroState } = await import("@/lib/customer-zero.server");
     return customerZeroState(context.userId);
@@ -15,14 +15,14 @@ const Id = z.object({ id: z.string().uuid() });
 async function ctx(userId: string) {
   const { assertCustomerZero } = await import("@/lib/customer-zero.server");
   const { resolveOrgIdForUser } = await import("@/lib/integrations/orgs.server");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { cloudAdmin: supabaseAdmin } = await import("@/lib/cloud/client.server");
   await assertCustomerZero(userId);
   const orgId = await resolveOrgIdForUser(userId);
   return { orgId, db: supabaseAdmin };
 }
 
 export const listWorkflows = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
     const { orgId, db } = await ctx(context.userId);
     const { data } = await db
@@ -36,7 +36,7 @@ export const listWorkflows = createServerFn({ method: "GET" })
 export const MAX_ACTIVE_CAMPAIGNS = 5;
 
 export const createWorkflow = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -84,7 +84,7 @@ export const createWorkflow = createServerFn({ method: "POST" })
   });
 
 export const deleteWorkflow = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => Id.parse(d))
   .handler(async ({ data, context }) => {
     const { orgId, db } = await ctx(context.userId);
@@ -102,7 +102,7 @@ export const deleteWorkflow = createServerFn({ method: "POST" })
   });
 
 export const getWorkflow = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => Id.parse(d))
   .handler(async ({ data, context }) => {
     const { orgId, db } = await ctx(context.userId);
@@ -157,7 +157,7 @@ export const getWorkflow = createServerFn({ method: "POST" })
   });
 
 export const saveBrief = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -209,7 +209,7 @@ export const saveBrief = createServerFn({ method: "POST" })
 
 /** Ingests a URL with the existing Firecrawl pipeline and pre-fills the brief. */
 export const ingestBriefFromUrl = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -267,7 +267,7 @@ export const ingestBriefFromUrl = createServerFn({ method: "POST" })
   });
 
 export const generateStrategy = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { orgId, db } = await ctx(context.userId);
@@ -310,7 +310,7 @@ export const generateStrategy = createServerFn({ method: "POST" })
   });
 
 export const saveStrategy = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -350,7 +350,7 @@ export const saveStrategy = createServerFn({ method: "POST" })
   });
 
 export const generateContentPack = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { orgId, db } = await ctx(context.userId);
@@ -406,7 +406,7 @@ export const generateContentPack = createServerFn({ method: "POST" })
 
 /** Links an existing Campaign Kit (Studio) record to this workflow. */
 export const attachCampaignKit = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z.object({ workflow_id: z.string().uuid(), campaign_id: z.string().uuid() }).parse(d),
   )
@@ -435,7 +435,7 @@ export const attachCampaignKit = createServerFn({ method: "POST" })
 export type CampaignAnalytics = Awaited<ReturnType<typeof buildAnalytics>>;
 
 async function buildAnalytics(orgId: string, workflowId: string) {
-  const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+  const { cloudAdmin: db } = await import("@/lib/cloud/client.server");
 
   const { data: wf } = await db
     .from("campaign_workflows")
@@ -543,7 +543,7 @@ async function buildAnalytics(orgId: string, workflowId: string) {
 }
 
 export const getCampaignAnalytics = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { orgId } = await ctx(context.userId);
@@ -552,7 +552,7 @@ export const getCampaignAnalytics = createServerFn({ method: "POST" })
 
 /** Analyses the brief + strategy and returns a per-platform media plan with a real budget split. */
 export const generateChannelPlan = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     z
       .object({

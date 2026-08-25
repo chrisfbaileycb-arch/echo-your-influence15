@@ -20,7 +20,7 @@
  *   POST /api/v1/emailer_campaigns/:id/add_contact_ids
  *   GET  /api/v1/email_accounts
  */
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { cloudAdmin as supabaseAdmin } from "@/lib/cloud/client.server";
 import { decryptSecret, sanitizeError } from "@/lib/integrations/crypto.server";
 
 const BASE = "https://api.apollo.io";

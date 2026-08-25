@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 import type { AgentAction, AgentAttachment } from "./agent/types";
 
 const AttachmentSchema = z.object({
@@ -44,7 +44,7 @@ const ExecuteActionInput = z.object({
 });
 
 export const runAgentPrompt = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => AgentPromptInput.parse(d))
   .handler(async ({ data }) => {
     const { processAgentRequest } = await import("@/lib/agent.server");
@@ -57,7 +57,7 @@ export const runAgentPrompt = createServerFn({ method: "POST" })
   });
 
 export const executeAgentActionFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => ExecuteActionInput.parse(d))
   .handler(async ({ data, context }) => {
     const { executeSingleAction } = await import("@/lib/agent.server");
@@ -91,7 +91,7 @@ const ExecuteSkillInput = z.object({
 });
 
 export const executeAgentSkillFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => ExecuteSkillInput.parse(d))
   .handler(async ({ data, context }) => {
     const { executeSkillDirectly } = await import("@/lib/agent.server");
@@ -109,7 +109,7 @@ export const executeAgentSkillFn = createServerFn({ method: "POST" })
   });
 
 export const getAgentSkillsCatalogFn = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async () => {
     const { getAllSkills } = await import("@/lib/agent.server");
     const skills = getAllSkills().map((s) => ({

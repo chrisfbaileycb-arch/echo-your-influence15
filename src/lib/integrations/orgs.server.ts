@@ -1,10 +1,10 @@
-// Server-only org resolution. Uses the service-role client after the caller's
-// identity has already been verified by requireSupabaseAuth.
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+// Server-only org resolution. Uses the Google Cloud backend client after the caller's
+// identity has already been verified by requireCloudAuth.
+import { cloudAdmin } from "@/lib/cloud/client.server";
 
 /** Returns the caller's personal/primary organization id, provisioning if needed. */
 export async function resolveOrgIdForUser(userId: string, displayName?: string): Promise<string> {
-  const { data: membership } = await supabaseAdmin
+  const { data: membership } = await cloudAdmin
     .from("organization_members")
     .select("org_id, role, created_at")
     .eq("user_id", userId)
@@ -13,7 +13,7 @@ export async function resolveOrgIdForUser(userId: string, displayName?: string):
     .maybeSingle();
   if (membership?.org_id) return membership.org_id;
 
-  const { data, error } = await supabaseAdmin.rpc("provision_personal_org", {
+  const { data, error } = await cloudAdmin.rpc("provision_personal_org", {
     _user_id: userId,
     _name: displayName ? `${displayName}'s workspace` : "My workspace",
   });
@@ -23,7 +23,7 @@ export async function resolveOrgIdForUser(userId: string, displayName?: string):
 
 /** Hard ownership check — every service-role write goes through this first. */
 export async function assertOrgMember(orgId: string, userId: string): Promise<void> {
-  const { data } = await supabaseAdmin
+  const { data } = await cloudAdmin
     .from("organization_members")
     .select("id")
     .eq("org_id", orgId)

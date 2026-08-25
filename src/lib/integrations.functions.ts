@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 import {
   ACTIVE_OUTBOUND_PROVIDER_IDS,
   OUTBOUND_PROVIDER_IDS,
@@ -47,12 +47,12 @@ export type IntegrationsOverview = {
 
 /** Read-only overview. Never returns ciphertext, keys, or profile refs. */
 export const getIntegrationsOverview = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }): Promise<IntegrationsOverview> => {
     const { resolveOrgIdForUser } = await import("@/lib/integrations/orgs.server");
     const { encryptionAvailable } = await import("@/lib/integrations/crypto.server");
     const { ayrshareConfigured } = await import("@/lib/social/ayrshare.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { cloudAdmin: supabaseAdmin } = await import("@/lib/cloud/client.server");
 
     const orgId = await resolveOrgIdForUser(context.userId);
 
@@ -103,7 +103,7 @@ export const getIntegrationsOverview = createServerFn({ method: "GET" })
  * only in the UI. The key is encrypted immediately and never echoed back.
  */
 export const saveOutboundCredential = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => SaveCredentialInput.parse(d))
   .handler(async ({ data, context }) => {
     if (!isActiveOutboundProvider(data.provider)) {
@@ -112,7 +112,7 @@ export const saveOutboundCredential = createServerFn({ method: "POST" })
 
     const { resolveOrgIdForUser } = await import("@/lib/integrations/orgs.server");
     const crypto = await import("@/lib/integrations/crypto.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { cloudAdmin: supabaseAdmin } = await import("@/lib/cloud/client.server");
 
     if (!crypto.encryptionAvailable()) {
       throw new Error(
@@ -159,13 +159,13 @@ export const saveOutboundCredential = createServerFn({ method: "POST" })
   });
 
 export const disconnectIntegration = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) =>
     ProviderInput.extend({ category: z.enum(["outbound", "social"]) }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { resolveOrgIdForUser } = await import("@/lib/integrations/orgs.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { cloudAdmin: supabaseAdmin } = await import("@/lib/cloud/client.server");
     const orgId = await resolveOrgIdForUser(context.userId);
     const { error } = await supabaseAdmin
       .from("integration_credentials")
@@ -179,14 +179,14 @@ export const disconnectIntegration = createServerFn({ method: "POST" })
 
 /** Server-enforced: beta providers can never become the active provider. */
 export const setActiveOutboundProvider = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .inputValidator((d: unknown) => ProviderInput.parse(d))
   .handler(async ({ data, context }) => {
     if (!ACTIVE_OUTBOUND_PROVIDER_IDS.includes(data.provider as never)) {
       throw new Error("Beta / In Development — Select Apollo or Instantly for active campaigns.");
     }
     const { resolveOrgIdForUser } = await import("@/lib/integrations/orgs.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { cloudAdmin: supabaseAdmin } = await import("@/lib/cloud/client.server");
     const orgId = await resolveOrgIdForUser(context.userId);
     const { error } = await supabaseAdmin
       .from("org_settings")
@@ -201,13 +201,13 @@ export const setActiveOutboundProvider = createServerFn({ method: "POST" })
  * platform business key is absent.
  */
 export const startSocialLinking = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCloudAuth])
   .handler(async ({ context }) => {
     const { resolveOrgIdForUser } = await import("@/lib/integrations/orgs.server");
     const crypto = await import("@/lib/integrations/crypto.server");
     const { ayrshareAdapter, ayrshareConfigured, AYRSHARE_BLOCKER } =
       await import("@/lib/social/ayrshare.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { cloudAdmin: supabaseAdmin } = await import("@/lib/cloud/client.server");
 
     if (!ayrshareConfigured()) {
       return {

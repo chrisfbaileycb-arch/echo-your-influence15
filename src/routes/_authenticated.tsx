@@ -11,8 +11,7 @@ import {
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudAuth, type CloudSession } from "@/lib/cloud/client";
 import { getCustomerZeroState } from "@/lib/customer-zero.functions";
 import {
   LayoutDashboard,
@@ -55,7 +54,7 @@ const PLATFORM_SUBITEMS = [
 function AuthLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [session, setSession] = useState<CloudSession | null | undefined>(undefined);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const gateFn = useServerFn(getCustomerZeroState);
   const gate = useQuery({
@@ -73,31 +72,19 @@ function AuthLayout() {
   }, [isContentActive]);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = cloudAuth.onAuthStateChange((_e, s) => {
       if (s) setSession(s);
     });
 
     async function checkAuth() {
       try {
-        const { data } = await supabase.auth.getSession();
+        const { data } = await cloudAuth.getSession();
         if (data?.session) {
           setSession(data.session);
           return;
         }
       } catch (err) {
-        console.warn("[AuthLayout] Supabase session check failed:", err);
-      }
-
-      if (typeof window !== "undefined") {
-        const storedDemo = localStorage.getItem("echo_demo_session");
-        if (storedDemo) {
-          try {
-            setSession(JSON.parse(storedDemo));
-            return;
-          } catch (e) {
-            localStorage.removeItem("echo_demo_session");
-          }
-        }
+        console.warn("[AuthLayout] Session check failed:", err);
       }
 
       setSession(null);
@@ -370,14 +357,7 @@ function AuthLayout() {
             <p className="truncate px-2 text-muted-foreground">{session.user.email}</p>
             <button
               onClick={async () => {
-                if (typeof window !== "undefined") {
-                  localStorage.removeItem("echo_demo_session");
-                }
-                try {
-                  await supabase.auth.signOut();
-                } catch (err) {
-                  console.warn("Sign out warning:", err);
-                }
+                await cloudAuth.signOut();
                 setSession(null);
                 navigate({ to: "/auth" });
               }}

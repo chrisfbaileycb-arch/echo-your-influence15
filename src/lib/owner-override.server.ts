@@ -10,7 +10,7 @@
  *                  project is treated as the operator identity.
  * OWNER_OVERRIDE_MODE  "false" disables the override entirely.
  */
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { cloudAdmin } from "@/lib/cloud/client.server";
 
 export const OWNER_TIER_LABEL = "Owner — comped access";
 
@@ -30,7 +30,7 @@ let cachedOwnerId: string | null | undefined;
 
 async function projectOwnerId(): Promise<string | null> {
   if (cachedOwnerId !== undefined) return cachedOwnerId;
-  const { data } = await supabaseAdmin
+  const { data } = await cloudAdmin
     .from("organizations")
     .select("owner_id, created_at")
     .order("created_at", { ascending: true })
@@ -63,7 +63,7 @@ export async function consumeQuotaUnlessOwner(
     return { result: { ok: true }, bypassed: true };
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabaseAdmin.rpc as any)(rpc, args);
+  const { data, error } = await (cloudAdmin.rpc as any)(rpc, args);
   if (error) throw new Error((error as { message: string }).message);
   return { result: data as QuotaResult, bypassed: false };
 }

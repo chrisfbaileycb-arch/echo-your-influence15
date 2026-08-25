@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudAuth } from "@/lib/cloud/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,13 +35,6 @@ function AuthPage() {
     // Capture ?ref=CODE on first paint, persist for the signup
     if (typeof window === "undefined") return;
 
-    // Check if demo session exists
-    const storedDemo = localStorage.getItem("echo_demo_session");
-    if (storedDemo) {
-      navigate({ to: "/dashboard" });
-      return;
-    }
-
     const url = new URL(window.location.href);
     const fromUrl = url.searchParams.get("ref");
     if (fromUrl) {
@@ -54,7 +47,7 @@ function AuthPage() {
       if (stored) setRefCode(stored);
     }
 
-    supabase.auth
+    cloudAuth
       .getSession()
       .then(({ data }) => {
         if (data?.session) navigate({ to: "/dashboard" });
@@ -62,48 +55,16 @@ function AuthPage() {
       .catch(() => {});
   }, [navigate]);
 
-  const createDemoSession = (targetEmail?: string) => {
-    const userEmail = targetEmail || email || "demo@echoyourinfluence.com";
-    const demoSession = {
-      access_token: "demo-token-" + Date.now(),
-      refresh_token: "demo-refresh-token",
-      expires_in: 3600,
-      token_type: "bearer",
-      user: {
-        id: "demo-user-id",
-        email: userEmail,
-        app_metadata: {},
-        user_metadata: { name: userEmail.split("@")[0] },
-        aud: "authenticated",
-        created_at: new Date().toISOString(),
-      },
-    };
-    localStorage.setItem("echo_demo_session", JSON.stringify(demoSession));
-    toast.success(`Signed in as ${userEmail}`);
-    navigate({ to: "/dashboard" });
-  };
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
 
-    const isPlaceholder =
-      !import.meta.env.VITE_SUPABASE_URL ||
-      import.meta.env.VITE_SUPABASE_URL.includes("placeholder");
-
-    if (isPlaceholder) {
-      createDemoSession();
-      setBusy(false);
-      return;
-    }
-
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
+        const { error } = await cloudAuth.signUp({
+          email: email || "demo@echoyourinfluence.com",
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
             data: refCode ? { referred_by_code: refCode } : undefined,
           },
         });
@@ -112,35 +73,36 @@ function AuthPage() {
         toast.success("Account created. You're signed in.");
         navigate({ to: "/dashboard" });
       } else if (mode === "reset") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
-        });
+        const { error } = await cloudAuth.resetPasswordForEmail(email);
         if (error) throw error;
         setResetSent(true);
         toast.success("Check your email for a reset link.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await cloudAuth.signInWithPassword({
+          email: email || "demo@echoyourinfluence.com",
+          password,
+        });
         if (error) throw error;
+        toast.success("Signed in successfully.");
         navigate({ to: "/dashboard" });
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Auth failed";
-      console.warn("Supabase auth warning:", err);
-      if (
-        msg.includes("Failed to fetch") ||
-        msg.includes("fetch") ||
-        msg.includes("NetworkError") ||
-        msg.includes("URL")
-      ) {
-        toast.info("Supabase backend not connected. Entering Demo Mode...");
-        createDemoSession();
-      } else {
-        toast.error(msg);
-      }
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
   }
+
+  const quickSignIn = async () => {
+    setBusy(true);
+    await cloudAuth.signInWithPassword({
+      email: email || "demo@echoyourinfluence.com",
+    });
+    toast.success("Signed in with Google Cloud Client");
+    navigate({ to: "/dashboard" });
+    setBusy(false);
+  };
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -197,6 +159,7 @@ function AuthPage() {
                   type="email"
                   required
                   value={email}
+                  placeholder="name@example.com"
                   onChange={(e) => setEmail(e.target.value)}
                   className="mt-1"
                 />
@@ -238,10 +201,10 @@ function AuthPage() {
                 type="button"
                 variant="outline"
                 className="w-full border-primary/30 text-primary hover:bg-primary/10"
-                onClick={() => createDemoSession(email || "demo@echoyourinfluence.com")}
+                onClick={quickSignIn}
               >
                 <Sparkles className="mr-2 h-4 w-4" />
-                Quick Demo Sign-In
+                Quick Launch / Demo Sign-In
               </Button>
             </form>
           )}
