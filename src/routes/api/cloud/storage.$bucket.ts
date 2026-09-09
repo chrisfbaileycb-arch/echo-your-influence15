@@ -9,7 +9,7 @@ export const Route = createFileRoute("/api/cloud/storage/$bucket")({
           const bucket = params.bucket;
           const url = new URL(request.url);
           const path = url.searchParams.get("path") || "";
-          const file = cloudStore.getStorage(bucket, path);
+          const file = await cloudStore.getStorage(bucket, path);
 
           if (!file) {
             return new Response("File not found in cloud storage", { status: 404 });
@@ -40,7 +40,7 @@ export const Route = createFileRoute("/api/cloud/storage/$bucket")({
             contentType?: string;
           };
 
-          cloudStore.putStorage(bucket, body.path, {
+          await cloudStore.putStorage(bucket, body.path, {
             name: body.path.split("/").pop() || "file",
             bucket,
             storagePath: body.path,

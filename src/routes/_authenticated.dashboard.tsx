@@ -8,7 +8,15 @@ import { listPrograms } from "@/lib/affiliate.functions";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowRight, Video as VideoIcon, Package } from "lucide-react";
+import {
+  Plus,
+  ArrowRight,
+  Video as VideoIcon,
+  Package,
+  TrendingUp,
+  Flame,
+  Users,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -78,6 +86,40 @@ function Dashboard() {
           </Link>
         </Card>
       </div>
+
+      {/* Impact & Follower Growth Spotlight */}
+      <Card className="border border-border/80 bg-gradient-to-r from-card via-card to-primary/5 p-6 shadow-xs">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <TrendingUp className="h-3.5 w-3.5" />
+              </span>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Impact Dashboard
+              </p>
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">
+                +16.4% growth
+              </span>
+            </div>
+            <h3 className="font-display text-xl font-bold">Follower Growth & Engagement</h3>
+            <p className="text-sm text-muted-foreground max-w-xl">
+              Audience momentum reached{" "}
+              <strong className="text-foreground">148.5k followers</strong> across TikTok, Reels,
+              and Shorts with a{" "}
+              <strong className="text-foreground">5.6% avg engagement rate</strong>.
+            </p>
+          </div>
+
+          <Link
+            to="/impact"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-pop transition hover:bg-primary/90 shrink-0"
+          >
+            Open Impact Dashboard
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </Card>
 
       <section>
         <div className="mb-4 flex items-center justify-between">

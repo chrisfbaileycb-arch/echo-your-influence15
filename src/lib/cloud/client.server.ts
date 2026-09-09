@@ -120,19 +120,19 @@ export class ServerQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
     });
   }
 
-  private applyJoins(items: Record<string, unknown>[]): Record<string, unknown>[] {
+  private async applyJoins(items: Record<string, unknown>[]): Promise<Record<string, unknown>[]> {
     if (!this.selectFields) return items;
 
     // Expand joins if select includes relations like products(*) or personas(*)
     if (this.selectFields.includes("products(")) {
-      const allProducts = cloudStore.getCollection("products");
+      const allProducts = await cloudStore.getCollection("products");
       items = items.map((item) => {
         const product = allProducts.find((p) => p.id === item.product_id) || null;
         return { ...item, products: product };
       });
     }
     if (this.selectFields.includes("personas(")) {
-      const allPersonas = cloudStore.getCollection("personas");
+      const allPersonas = await cloudStore.getCollection("personas");
       items = items.map((item) => {
         const persona = allPersonas.find((p) => p.id === item.persona_id) || null;
         return { ...item, personas: persona };
@@ -143,7 +143,8 @@ export class ServerQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
 
   private async execute(): Promise<{ data: unknown; error: Error | null }> {
     try {
-      let items = [...cloudStore.getCollection(this.table)] as Record<string, unknown>[];
+      // All cloudStore methods are now async
+      const items = [...(await cloudStore.getCollection(this.table))] as Record<string, unknown>[];
 
       // 1. Mutation: INSERT
       if (this.mutation?.type === "insert") {
@@ -154,15 +155,19 @@ export class ServerQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
         const insertedItems: Record<string, unknown>[] = [];
         for (const raw of payload as Record<string, unknown>[]) {
           const item = {
-            id: raw.id || crypto.randomUUID(),
-            created_at: raw.created_at || new Date().toISOString(),
-            updated_at: raw.updated_at || new Date().toISOString(),
+            id: (raw.id as string) || crypto.randomUUID(),
+            created_at: (raw.created_at as string) || new Date().toISOString(),
+            updated_at: (raw.updated_at as string) || new Date().toISOString(),
             ...raw,
           };
-          items.push(item);
+          // Write directly to Firestore — no need to reload the full collection
+          await cloudStore.upsertDoc(
+            this.table,
+            item.id as string,
+            item as unknown as Partial<DatabaseSchema[T]>,
+          );
           insertedItems.push(item);
         }
-        cloudStore.setCollection(this.table, items as unknown as Array<DatabaseSchema[T]>);
 
         if (this.isSingle || this.isMaybeSingle) {
           return { data: insertedItems[0] || null, error: null };
@@ -176,24 +181,24 @@ export class ServerQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
       // 2. Mutation: UPDATE
       if (this.mutation?.type === "update") {
         const updateData = (this.mutation.payload || {}) as Record<string, unknown>;
-        let updatedCount = 0;
         const updatedList: Record<string, unknown>[] = [];
 
-        items = items.map((item) => {
+        for (const item of items) {
           let match = true;
           for (const f of this.filters) {
             if (f.operator === "eq" && item[f.field] !== f.value) match = false;
           }
           if (match) {
-            updatedCount++;
             const updated = { ...item, ...updateData, updated_at: new Date().toISOString() };
+            await cloudStore.upsertDoc(
+              this.table,
+              item.id as string,
+              updated as unknown as Partial<DatabaseSchema[T]>,
+            );
             updatedList.push(updated);
-            return updated;
           }
-          return item;
-        });
+        }
 
-        cloudStore.setCollection(this.table, items);
         if (this.isSingle || this.isMaybeSingle) {
           return { data: updatedList[0] || null, error: null };
         }
@@ -202,15 +207,18 @@ export class ServerQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
 
       // 3. Mutation: DELETE
       if (this.mutation?.type === "delete") {
-        const beforeLen = items.length;
-        items = items.filter((item) => {
+        let deletedCount = 0;
+        for (const item of items) {
+          let match = true;
           for (const f of this.filters) {
-            if (f.operator === "eq" && item[f.field] === f.value) return false;
+            if (f.operator === "eq" && item[f.field] !== f.value) match = false;
           }
-          return true;
-        });
-        cloudStore.setCollection(this.table, items);
-        return { data: { count: beforeLen - items.length }, error: null };
+          if (match) {
+            await cloudStore.deleteDoc(this.table, item.id as string);
+            deletedCount++;
+          }
+        }
+        return { data: { count: deletedCount }, error: null };
       }
 
       // 4. Mutation: UPSERT
@@ -219,22 +227,12 @@ export class ServerQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
           ? this.mutation.payload
           : [this.mutation.payload];
 
-        for (const raw of rawPayload) {
-          const idx = items.findIndex(
-            (i) => (raw.id && i.id === raw.id) || (raw.user_id && i.user_id === raw.user_id),
-          );
-          if (idx >= 0) {
-            items[idx] = { ...items[idx], ...raw, updated_at: new Date().toISOString() };
-          } else {
-            items.push({
-              id: raw.id || crypto.randomUUID(),
-              created_at: raw.created_at || new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              ...raw,
-            });
-          }
+        for (const raw of rawPayload as Record<string, unknown>[]) {
+          const id = (raw.id as string) || crypto.randomUUID();
+          await cloudStore.upsertDoc(this.table, id, { ...raw, id } as unknown as Partial<
+            DatabaseSchema[T]
+          >);
         }
-        cloudStore.setCollection(this.table, items);
         return { data: this.mutation.payload, error: null };
       }
 
@@ -255,7 +253,7 @@ export class ServerQueryBuilder<T extends TableName, R = DatabaseSchema[T]> {
         filtered = filtered.slice(0, this.limitCount);
       }
 
-      filtered = this.applyJoins(filtered);
+      filtered = await this.applyJoins(filtered);
 
       if (this.isSingle) {
         return {
@@ -310,7 +308,7 @@ export class GoogleCloudAdminClient {
               typeof fileBody === "string" && fileBody.startsWith("data:")
                 ? fileBody
                 : `data:${options?.contentType || "application/octet-stream"};base64,${Buffer.from(fileBody as ArrayBuffer).toString("base64")}`;
-            cloudStore.putStorage(bucket, filePath, {
+            await cloudStore.putStorage(bucket, filePath, {
               name: filePath.split("/").pop() || "file",
               bucket,
               storagePath: filePath,
@@ -325,19 +323,18 @@ export class GoogleCloudAdminClient {
           }
         },
         createSignedUrl: async (filePath: string, _expiresInSeconds = 3600) => {
-          const file = cloudStore.getStorage(bucket, filePath);
+          const file = await cloudStore.getStorage(bucket, filePath);
           const url = file?.dataUrl || `/api/cloud/storage/${bucket}/${filePath}`;
           return { data: { signedUrl: url }, error: null };
         },
         getPublicUrl: (filePath: string) => {
-          const file = cloudStore.getStorage(bucket, filePath);
           return {
-            data: { publicUrl: file?.dataUrl || `/api/cloud/storage/${bucket}/${filePath}` },
+            data: { publicUrl: `/api/cloud/storage/${bucket}/${filePath}` },
           };
         },
         remove: async (paths: string[]) => {
           for (const p of paths) {
-            cloudStore.deleteStorage(bucket, p);
+            await cloudStore.deleteStorage(bucket, p);
           }
           return { data: { paths }, error: null };
         },

@@ -37,6 +37,7 @@ import {
   Menu,
   X,
   Bot,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -168,6 +169,18 @@ function AuthLayout() {
               )}
             >
               <LayoutDashboard className="h-4 w-4" /> Dashboard
+            </Link>
+
+            <Link
+              to="/impact"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition",
+                pathname === "/impact"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/80 hover:bg-card",
+              )}
+            >
+              <TrendingUp className="h-4 w-4 text-emerald-500" /> Impact Dashboard
             </Link>
 
             <Link
@@ -348,6 +361,18 @@ function AuthLayout() {
               )}
             >
               <LayoutDashboard className="h-4 w-4" /> Dashboard
+            </Link>
+
+            <Link
+              to="/impact"
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+                pathname === "/impact"
+                  ? "bg-primary text-primary-foreground shadow-pop"
+                  : "text-foreground/70 hover:bg-card hover:text-foreground",
+              )}
+            >
+              <TrendingUp className="h-4 w-4 text-emerald-500" /> Impact Dashboard
             </Link>
 
             <Link

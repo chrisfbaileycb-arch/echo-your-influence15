@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Block all direct client-side access.
+    // The app uses the Firebase Admin SDK exclusively (server-side),
+    // which bypasses these rules. This rule set is a safety net.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
