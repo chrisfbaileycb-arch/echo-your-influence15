@@ -9,6 +9,7 @@ import {
 } from "./agent/types";
 import { getSkill, getAllSkills, matchSkillsForPrompt, executeSkillDirectly } from "./agent/skills";
 import { cloudAdmin as supabaseAdmin } from "@/lib/cloud/client.server";
+import { getLogfire } from "./logfire.server";
 
 let genAIClient: GoogleGenAI | null = null;
 
@@ -146,29 +147,39 @@ export async function processAgentRequest({
     selectedProductId?: string;
   };
 }) {
-  const ai = getGeminiClient();
+  const logfire = getLogfire();
 
-  const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
+  return await logfire.span("agent.process_request", {
+    attributes: {
+      "agent.prompt_length": prompt.length,
+      "agent.attachments_count": attachments.length,
+      "agent.route": contextData.currentPath || "/dashboard",
+    },
+    callback: async () => {
+      const ai = getGeminiClient();
 
-  // Add attachments (images, video snapshots, etc.)
-  for (const att of attachments) {
-    if (att.dataBase64) {
-      // Clean base64 string
-      const rawBase64 = att.dataBase64.includes(",")
-        ? att.dataBase64.split(",")[1]
-        : att.dataBase64;
+      const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> =
+        [];
 
-      parts.push({
-        inlineData: {
-          mimeType: att.mimeType || "image/jpeg",
-          data: rawBase64,
-        },
-      });
-    }
-  }
+      // Add attachments (images, video snapshots, etc.)
+      for (const att of attachments) {
+        if (att.dataBase64) {
+          // Clean base64 string
+          const rawBase64 = att.dataBase64.includes(",")
+            ? att.dataBase64.split(",")[1]
+            : att.dataBase64;
 
-  // Build user prompt with workspace context
-  const contextNote = `
+          parts.push({
+            inlineData: {
+              mimeType: att.mimeType || "image/jpeg",
+              data: rawBase64,
+            },
+          });
+        }
+      }
+
+      // Build user prompt with workspace context
+      const contextNote = `
 Current User Workspace Context:
 - Active Route: ${contextData.currentPath || "/dashboard"}
 - Existing Products Count: ${contextData.existingProductsCount ?? 0}
@@ -176,147 +187,173 @@ Current User Workspace Context:
 - Today's Date: ${new Date().toISOString().slice(0, 10)}
 `;
 
-  const userQuery = `${contextNote}\n\nUSER PROMPT / IDEA:\n${prompt}`;
-  parts.push({ text: userQuery });
+      const userQuery = `${contextNote}\n\nUSER PROMPT / IDEA:\n${prompt}`;
+      parts.push({ text: userQuery });
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.7-flash",
-      contents: {
-        parts,
-      },
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        temperature: 0.7,
-      },
-    });
-
-    const text = response.text ?? "{}";
-    const parsed = JSON.parse(text);
-
-    const skillsUsed: AgentSkillId[] = Array.isArray(parsed.skillsUsed)
-      ? parsed.skillsUsed
-      : ["product_analyzer", "carousel_designer"];
-
-    const actions: AgentAction[] = Array.isArray(parsed.actions)
-      ? parsed.actions.map((a: Record<string, unknown>, idx: number) => ({
-          id: String(a.id || `act-${Date.now()}-${idx}`),
-          type: (a.type as AgentAction["type"]) || "create_product",
-          title: String(a.title || "Proposed In-App Action"),
-          summary: String(a.summary || ""),
-          status: "pending" as const,
-          payload: (a.payload as Record<string, unknown>) || {},
-        }))
-      : [];
-
-    return {
-      thought:
-        parsed.thought ||
-        "I've analyzed your idea and formulated an end-to-end multi-channel campaign workflow.",
-      skillsUsed,
-      actions,
-      carouselArtifact: parsed.carouselArtifact as CarouselArtifact | undefined,
-      videoScriptArtifact: parsed.videoScriptArtifact as VideoScriptArtifact | undefined,
-    };
-  } catch (error: unknown) {
-    console.error("[Agent.server.ts] Gemini analysis error:", error);
-    // Fallback safe payload if API issue occurs
-    return {
-      thought: `I've mapped out your request: "${prompt}". You can review the suggested campaign components below.`,
-      skillsUsed: ["product_analyzer", "carousel_designer", "calendar_scheduler"] as AgentSkillId[],
-      actions: [
-        {
-          id: `act-${Date.now()}-1`,
-          type: "create_product" as const,
-          title: `Create Marketing Offer: ${prompt.slice(0, 30)}...`,
-          summary: "Initialize a high-converting product card in your catalog.",
-          status: "pending" as const,
-          payload: {
-            title: prompt.slice(0, 50) || "New Campaign Offer",
-            description: prompt,
-            price: "$49.00",
-            campaign_mode: "saas_app",
+      try {
+        const response = await logfire.span("gemini.generate_content", {
+          attributes: {
+            "gen_ai.system": "gemini",
+            "gen_ai.request.model": "gemini-3.7-flash",
           },
-        },
-        {
-          id: `act-${Date.now()}-2`,
-          type: "schedule_calendar_slots" as const,
-          title: "Schedule 3-Day Teaser Publishing Series",
-          summary: "Auto-format and schedule across TikTok, Reels, & Shorts.",
-          status: "pending" as const,
-          payload: {
-            slots: [
+          callback: async () => {
+            return await ai.models.generateContent({
+              model: "gemini-3.7-flash",
+              contents: {
+                parts,
+              },
+              config: {
+                systemInstruction: SYSTEM_INSTRUCTION,
+                responseMimeType: "application/json",
+                temperature: 0.7,
+              },
+            });
+          },
+        });
+
+        const text = response.text ?? "{}";
+        const parsed = JSON.parse(text);
+
+        const skillsUsed: AgentSkillId[] = Array.isArray(parsed.skillsUsed)
+          ? parsed.skillsUsed
+          : ["product_analyzer", "carousel_designer"];
+
+        const actions: AgentAction[] = Array.isArray(parsed.actions)
+          ? parsed.actions.map((a: Record<string, unknown>, idx: number) => ({
+              id: String(a.id || `act-${Date.now()}-${idx}`),
+              type: (a.type as AgentAction["type"]) || "create_product",
+              title: String(a.title || "Proposed In-App Action"),
+              summary: String(a.summary || ""),
+              status: "pending" as const,
+              payload: (a.payload as Record<string, unknown>) || {},
+            }))
+          : [];
+
+        logfire.info("Agent request processed successfully", {
+          skills_count: skillsUsed.length,
+          actions_count: actions.length,
+          has_carousel: !!parsed.carouselArtifact,
+          has_video_script: !!parsed.videoScriptArtifact,
+        });
+
+        return {
+          thought:
+            parsed.thought ||
+            "I've analyzed your idea and formulated an end-to-end multi-channel campaign workflow.",
+          skillsUsed,
+          actions,
+          carouselArtifact: parsed.carouselArtifact as CarouselArtifact | undefined,
+          videoScriptArtifact: parsed.videoScriptArtifact as VideoScriptArtifact | undefined,
+        };
+      } catch (error: unknown) {
+        logfire.error("Gemini analysis error during agent execution", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        console.error("[Agent.server.ts] Gemini analysis error:", error);
+        // Fallback safe payload if API issue occurs
+        return {
+          thought: `I've mapped out your request: "${prompt}". You can review the suggested campaign components below.`,
+          skillsUsed: [
+            "product_analyzer",
+            "carousel_designer",
+            "calendar_scheduler",
+          ] as AgentSkillId[],
+          actions: [
+            {
+              id: `act-${Date.now()}-1`,
+              type: "create_product" as const,
+              title: `Create Marketing Offer: ${prompt.slice(0, 30)}...`,
+              summary: "Initialize a high-converting product card in your catalog.",
+              status: "pending" as const,
+              payload: {
+                title: prompt.slice(0, 50) || "New Campaign Offer",
+                description: prompt,
+                price: "$49.00",
+                campaign_mode: "saas_app",
+              },
+            },
+            {
+              id: `act-${Date.now()}-2`,
+              type: "schedule_calendar_slots" as const,
+              title: "Schedule 3-Day Teaser Publishing Series",
+              summary: "Auto-format and schedule across TikTok, Reels, & Shorts.",
+              status: "pending" as const,
+              payload: {
+                slots: [
+                  {
+                    plan_date: new Date().toISOString().slice(0, 10),
+                    slot_time: "10:00",
+                    title: "Launch Teaser Video",
+                    platforms: ["tiktok", "instagram", "youtube"],
+                    hook: "Here's how to turn your idea into a full marketing campaign in 2 minutes...",
+                    script:
+                      "Step 1: Ingest your idea. Step 2: Auto-generate carousels and UGC scripts.",
+                    caption: "The easiest way to scale organic content. Link in bio!",
+                    hashtags: ["#marketing", "#workflow", "#contentcreator"],
+                  },
+                ],
+              },
+            },
+          ],
+          carouselArtifact: {
+            title: "Launch Week: Ship It in a Weekend",
+            style: "minimalist" as const,
+            accentColor: "#6366F1",
+            slides: [
               {
-                plan_date: new Date().toISOString().slice(0, 10),
-                slot_time: "10:00",
-                title: "Launch Teaser Video",
-                platforms: ["tiktok", "instagram", "youtube"],
-                hook: "Here's how to turn your idea into a full marketing campaign in 2 minutes...",
-                script:
-                  "Step 1: Ingest your idea. Step 2: Auto-generate carousels and UGC scripts.",
-                caption: "The easiest way to scale organic content. Link in bio!",
-                hashtags: ["#marketing", "#workflow", "#contentcreator"],
+                slideNumber: 1,
+                eyebrow: "LAUNCH WEEK",
+                headline: "Ship it in a weekend.",
+                subheadline: "A 5-slide teaser series",
+                ctaText: "Swipe next ->",
+              },
+              {
+                slideNumber: 2,
+                eyebrow: "THE PROBLEM",
+                headline: "Most creators wait months.",
+                subheadline: "Perfectionism kills momentum before you even launch.",
+                ctaText: "Here's the fix ->",
+              },
+              {
+                slideNumber: 3,
+                eyebrow: "THE PLAYBOOK",
+                headline: "Automate Content Scheduling",
+                subheadline: "Auto-format videos for TikTok, Reels, & Shorts.",
+                ctaText: "Step 2 ->",
+              },
+              {
+                slideNumber: 4,
+                eyebrow: "ZERO FRICTION",
+                headline: "Zero Password Sharing",
+                subheadline: "Safe, API-based social publishing.",
+                ctaText: "Final step ->",
+              },
+              {
+                slideNumber: 5,
+                eyebrow: "START TODAY",
+                headline: "Echo Your Influence",
+                subheadline: "Pre-built campaign templates for food, retail, & services.",
+                ctaText: "Get started ->",
               },
             ],
           },
-        },
-      ],
-      carouselArtifact: {
-        title: "Launch Week: Ship It in a Weekend",
-        style: "minimalist" as const,
-        accentColor: "#6366F1",
-        slides: [
-          {
-            slideNumber: 1,
-            eyebrow: "LAUNCH WEEK",
-            headline: "Ship it in a weekend.",
-            subheadline: "A 5-slide teaser series",
-            ctaText: "Swipe next ->",
+          videoScriptArtifact: {
+            title: "15s Hook & UGC Script",
+            hook: "3 things you need to know before launching your next campaign...",
+            bodyScript:
+              "Instead of hiring a 5-person agency, our in-app AI executes the entire workflow on your behalf.",
+            callToAction: "Click the link in bio to start your first campaign today.",
+            caption:
+              "Agency-in-a-box for modern creators 🚀 #ecommerce #ugccreator #socialmarketing",
+            hashtags: ["#marketingagency", "#contentcreator", "#ecommerce"],
+            durationSeconds: 15,
+            visualDirection:
+              "Dynamic creator selfie video, high-contrast captions, crisp transitions.",
           },
-          {
-            slideNumber: 2,
-            eyebrow: "THE PROBLEM",
-            headline: "Most creators wait months.",
-            subheadline: "Perfectionism kills momentum before you even launch.",
-            ctaText: "Here's the fix ->",
-          },
-          {
-            slideNumber: 3,
-            eyebrow: "THE PLAYBOOK",
-            headline: "Automate Content Scheduling",
-            subheadline: "Auto-format videos for TikTok, Reels, & Shorts.",
-            ctaText: "Step 2 ->",
-          },
-          {
-            slideNumber: 4,
-            eyebrow: "ZERO FRICTION",
-            headline: "Zero Password Sharing",
-            subheadline: "Safe, API-based social publishing.",
-            ctaText: "Final step ->",
-          },
-          {
-            slideNumber: 5,
-            eyebrow: "START TODAY",
-            headline: "Echo Your Influence",
-            subheadline: "Pre-built campaign templates for food, retail, & services.",
-            ctaText: "Get started ->",
-          },
-        ],
-      },
-      videoScriptArtifact: {
-        title: "15s Hook & UGC Script",
-        hook: "3 things you need to know before launching your next campaign...",
-        bodyScript:
-          "Instead of hiring a 5-person agency, our in-app AI executes the entire workflow on your behalf.",
-        callToAction: "Click the link in bio to start your first campaign today.",
-        caption: "Agency-in-a-box for modern creators 🚀 #ecommerce #ugccreator #socialmarketing",
-        hashtags: ["#marketingagency", "#contentcreator", "#ecommerce"],
-        durationSeconds: 15,
-        visualDirection: "Dynamic creator selfie video, high-contrast captions, crisp transitions.",
-      },
-    };
-  }
+        };
+      }
+    },
+  });
 }
 
 /**
@@ -335,156 +372,175 @@ export async function executeSingleAction({
   url?: string;
   message?: string;
 }> {
-  try {
-    const { resolveOrgIdForUser } = await import("@/lib/integrations/orgs.server");
-    let orgId: string | null = null;
-    try {
-      orgId = await resolveOrgIdForUser(userId);
-    } catch {
-      // Fallback
-    }
+  const logfire = getLogfire();
 
-    if (action.type === "create_product") {
-      const p = action.payload;
-      const { data: product, error } = await supabaseAdmin
-        .from("products")
-        .insert({
-          user_id: userId,
-          title: p.title || "New Product Offer",
-          description: p.description || "",
-          price: p.price || "",
-          currency: p.currency || "USD",
-          campaign_mode: p.campaign_mode || "saas_app",
-          source_url: p.source_url || "",
-          source_domain: p.source_url ? new URL(p.source_url).hostname : null,
-          images: Array.isArray(p.images) ? p.images : [],
-        })
-        .select("id, title")
-        .single();
-
-      if (error) throw new Error(error.message);
-      return {
-        success: true,
-        entityId: product.id,
-        entityType: "product",
-        url: `/products/${product.id}`,
-        message: `Created product "${product.title}" in your catalog.`,
-      };
-    }
-
-    if (action.type === "create_persona") {
-      const p = action.payload;
-      const { data: persona, error } = await supabaseAdmin
-        .from("personas")
-        .insert({
-          user_id: userId,
-          name: p.name || "Alex Jordan",
-          gender: p.gender || "female",
-          age_range: p.age_range || "25-32",
-          vibe: p.vibe || "chill-millennial",
-          niche: p.niche || "tech",
-          voice_tone: p.voice_tone || "confident",
-          bio: p.bio || "Tech & lifestyle creator testing high-converting offers.",
-          catchphrases: Array.isArray(p.catchphrases)
-            ? p.catchphrases
-            : ["Check this out", "Game changer"],
-          speech_quirks: p.speech_quirks || "Upbeat, casual, and energetic cadence.",
-          heygen_avatar_id: "Daisy-inskirt-20220818",
-          elevenlabs_voice_id: "2d5b0e6cf36f460aa7fc47e3eee4ba54",
-          is_default: false,
-        })
-        .select("id, name")
-        .single();
-
-      if (error) throw new Error(error.message);
-      return {
-        success: true,
-        entityId: persona.id,
-        entityType: "persona",
-        url: `/personas`,
-        message: `Built influencer persona "${persona.name}" with voice & avatar mapping.`,
-      };
-    }
-
-    if (action.type === "schedule_calendar_slots") {
-      const slots = Array.isArray(action.payload.slots) ? action.payload.slots : [action.payload];
-      const createdIds: string[] = [];
-
-      for (const slot of slots) {
-        const { data: row, error } = await supabaseAdmin
-          .from("calendar_slots")
-          .insert({
-            org_id: orgId || userId,
-            created_by: userId,
-            plan_date: slot.plan_date || new Date().toISOString().slice(0, 10),
-            slot_time: slot.slot_time || "09:00",
-            title: slot.title || "Scheduled Content Post",
-            engine: slot.engine || "avatar",
-            platforms: Array.isArray(slot.platforms) ? slot.platforms : ["tiktok", "instagram"],
-            hook: slot.hook || "",
-            script: slot.script || "",
-            caption: slot.caption || "",
-            hashtags: Array.isArray(slot.hashtags) ? slot.hashtags : [],
-            status: "planned",
-          })
-          .select("id")
-          .single();
-
-        if (!error && row) {
-          createdIds.push(row.id);
+  return await logfire.span("agent.execute_action", {
+    attributes: {
+      "action.type": action.type,
+      "action.id": action.id,
+      "action.title": action.title,
+      "user.id": userId,
+    },
+    callback: async () => {
+      try {
+        const { resolveOrgIdForUser } = await import("@/lib/integrations/orgs.server");
+        let orgId: string | null = null;
+        try {
+          orgId = await resolveOrgIdForUser(userId);
+        } catch {
+          // Fallback
         }
+
+        if (action.type === "create_product") {
+          const p = action.payload;
+          const { data: product, error } = await supabaseAdmin
+            .from("products")
+            .insert({
+              user_id: userId,
+              title: p.title || "New Product Offer",
+              description: p.description || "",
+              price: p.price || "",
+              currency: p.currency || "USD",
+              campaign_mode: p.campaign_mode || "saas_app",
+              source_url: p.source_url || "",
+              source_domain: p.source_url ? new URL(p.source_url).hostname : null,
+              images: Array.isArray(p.images) ? p.images : [],
+            })
+            .select("id, title")
+            .single();
+
+          if (error) throw new Error(error.message);
+          return {
+            success: true,
+            entityId: product.id,
+            entityType: "product",
+            url: `/products/${product.id}`,
+            message: `Created product "${product.title}" in your catalog.`,
+          };
+        }
+
+        if (action.type === "create_persona") {
+          const p = action.payload;
+          const { data: persona, error } = await supabaseAdmin
+            .from("personas")
+            .insert({
+              user_id: userId,
+              name: p.name || "Alex Jordan",
+              gender: p.gender || "female",
+              age_range: p.age_range || "25-32",
+              vibe: p.vibe || "chill-millennial",
+              niche: p.niche || "tech",
+              voice_tone: p.voice_tone || "confident",
+              bio: p.bio || "Tech & lifestyle creator testing high-converting offers.",
+              catchphrases: Array.isArray(p.catchphrases)
+                ? p.catchphrases
+                : ["Check this out", "Game changer"],
+              speech_quirks: p.speech_quirks || "Upbeat, casual, and energetic cadence.",
+              heygen_avatar_id: "Daisy-inskirt-20220818",
+              elevenlabs_voice_id: "2d5b0e6cf36f460aa7fc47e3eee4ba54",
+              is_default: false,
+            })
+            .select("id, name")
+            .single();
+
+          if (error) throw new Error(error.message);
+          return {
+            success: true,
+            entityId: persona.id,
+            entityType: "persona",
+            url: `/personas`,
+            message: `Built influencer persona "${persona.name}" with voice & avatar mapping.`,
+          };
+        }
+
+        if (action.type === "schedule_calendar_slots") {
+          const slots = Array.isArray(action.payload.slots)
+            ? action.payload.slots
+            : [action.payload];
+          const createdIds: string[] = [];
+
+          for (const slot of slots) {
+            const { data: row, error } = await supabaseAdmin
+              .from("calendar_slots")
+              .insert({
+                org_id: orgId || userId,
+                created_by: userId,
+                plan_date: slot.plan_date || new Date().toISOString().slice(0, 10),
+                slot_time: slot.slot_time || "09:00",
+                title: slot.title || "Scheduled Content Post",
+                engine: slot.engine || "avatar",
+                platforms: Array.isArray(slot.platforms) ? slot.platforms : ["tiktok", "instagram"],
+                hook: slot.hook || "",
+                script: slot.script || "",
+                caption: slot.caption || "",
+                hashtags: Array.isArray(slot.hashtags) ? slot.hashtags : [],
+                status: "planned",
+              })
+              .select("id")
+              .single();
+
+            if (!error && row) {
+              createdIds.push(row.id);
+            }
+          }
+
+          return {
+            success: true,
+            entityId: createdIds[0],
+            entityType: "calendar",
+            url: `/calendar`,
+            message: `Scheduled ${createdIds.length || 1} content publishing slot(s) on your calendar.`,
+          };
+        }
+
+        if (action.type === "create_campaign") {
+          const p = action.payload;
+          const { data: campaign, error } = await supabaseAdmin
+            .from("campaigns")
+            .insert({
+              user_id: userId,
+              name: p.name || "New Omnichannel Campaign",
+              headline: p.headline || "Transform Your Workflow",
+              primary_text: p.primary_text || "The easiest way to scale content without burnout.",
+              ad_description: p.ad_description || "Deploy in minutes.",
+              status: "ready",
+              step: "Ready to render",
+              asset_kind: p.asset_kind || "saas",
+              include_video: true,
+              utm_campaign: (p.name || "campaign").toLowerCase().replace(/[^a-z0-9]+/g, "_"),
+            })
+            .select("id, name")
+            .single();
+
+          if (error) throw new Error(error.message);
+          return {
+            success: true,
+            entityId: campaign.id,
+            entityType: "campaign",
+            url: `/campaigns/${campaign.id}`,
+            message: `Launched campaign kit "${campaign.name}" with full UTM tracking.`,
+          };
+        }
+
+        // Default generic success
+        return {
+          success: true,
+          message: `Completed action: ${action.title}`,
+          url: `/dashboard`,
+        };
+      } catch (err: unknown) {
+        logfire.error("Action execution failed", {
+          action_type: action.type,
+          action_id: action.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        console.error("[Agent.server.ts] Action execution failed:", err);
+        const errorMessage = err instanceof Error ? err.message : "Failed to execute action";
+        return {
+          success: false,
+          message: errorMessage,
+        };
       }
-
-      return {
-        success: true,
-        entityId: createdIds[0],
-        entityType: "calendar",
-        url: `/calendar`,
-        message: `Scheduled ${createdIds.length || 1} content publishing slot(s) on your calendar.`,
-      };
-    }
-
-    if (action.type === "create_campaign") {
-      const p = action.payload;
-      const { data: campaign, error } = await supabaseAdmin
-        .from("campaigns")
-        .insert({
-          user_id: userId,
-          name: p.name || "New Omnichannel Campaign",
-          headline: p.headline || "Transform Your Workflow",
-          primary_text: p.primary_text || "The easiest way to scale content without burnout.",
-          ad_description: p.ad_description || "Deploy in minutes.",
-          status: "ready",
-          step: "Ready to render",
-          asset_kind: p.asset_kind || "saas",
-          include_video: true,
-          utm_campaign: (p.name || "campaign").toLowerCase().replace(/[^a-z0-9]+/g, "_"),
-        })
-        .select("id, name")
-        .single();
-
-      if (error) throw new Error(error.message);
-      return {
-        success: true,
-        entityId: campaign.id,
-        entityType: "campaign",
-        url: `/campaigns/${campaign.id}`,
-        message: `Launched campaign kit "${campaign.name}" with full UTM tracking.`,
-      };
-    }
-
-    // Default generic success
-    return {
-      success: true,
-      message: `Completed action: ${action.title}`,
-      url: `/dashboard`,
-    };
-  } catch (err: unknown) {
-    console.error("[Agent.server.ts] Action execution failed:", err);
-    const errorMessage = err instanceof Error ? err.message : "Failed to execute action";
-    return {
-      success: false,
-      message: errorMessage,
-    };
-  }
+    },
+  });
 }

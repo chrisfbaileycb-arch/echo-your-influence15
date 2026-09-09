@@ -1,4 +1,5 @@
 import "./lib/error-capture";
+import { getLogfire } from "./lib/logfire.server";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
@@ -39,16 +40,38 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
-    try {
+    const logfire = getLogfire();
+    const url = new URL(request.url);
+
+    // Skip noisy static asset requests if any
+    if (url.pathname.startsWith("/_build/") || url.pathname.startsWith("/assets/")) {
       const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
-    } catch (error) {
-      console.error(error);
-      return new Response(renderErrorPage(), {
-        status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
+      return await handler.fetch(request, env, ctx);
     }
+
+    return await logfire.span("http.server.request", {
+      attributes: {
+        "http.method": request.method,
+        "http.url": request.url,
+        "url.path": url.pathname,
+      },
+      callback: async () => {
+        try {
+          const handler = await getServerEntry();
+          const response = await handler.fetch(request, env, ctx);
+          return await normalizeCatastrophicSsrResponse(response);
+        } catch (error) {
+          logfire.error("Unhandled server SSR error", {
+            path: url.pathname,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          console.error(error);
+          return new Response(renderErrorPage(), {
+            status: 500,
+            headers: { "content-type": "text/html; charset=utf-8" },
+          });
+        }
+      },
+    });
   },
 };

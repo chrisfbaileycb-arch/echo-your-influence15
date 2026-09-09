@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import type { AgentAction, AgentAttachment, AgentSkillId } from "../types";
+import { getLogfire } from "../../logfire.server";
 
 export interface SkillExecutionContext {
   userId?: string;
@@ -79,40 +80,56 @@ export async function callSkillAI<T>(
   userPrompt: string,
   attachments: AgentAttachment[] = [],
 ): Promise<T> {
-  const ai = getGeminiClient();
-  const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
+  const logfire = getLogfire();
 
-  for (const att of attachments) {
-    if (att.dataBase64) {
-      const rawBase64 = att.dataBase64.includes(",")
-        ? att.dataBase64.split(",")[1]
-        : att.dataBase64;
-      parts.push({
-        inlineData: {
-          mimeType: att.mimeType || "image/jpeg",
-          data: rawBase64,
+  return await logfire.span("agent.skill_ai", {
+    attributes: {
+      "gen_ai.system": "gemini",
+      "gen_ai.request.model": "gemini-3.7-flash",
+      "agent.prompt_length": userPrompt.length,
+      "agent.attachments_count": attachments.length,
+    },
+    callback: async () => {
+      const ai = getGeminiClient();
+      const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> =
+        [];
+
+      for (const att of attachments) {
+        if (att.dataBase64) {
+          const rawBase64 = att.dataBase64.includes(",")
+            ? att.dataBase64.split(",")[1]
+            : att.dataBase64;
+          parts.push({
+            inlineData: {
+              mimeType: att.mimeType || "image/jpeg",
+              data: rawBase64,
+            },
+          });
+        }
+      }
+
+      parts.push({ text: userPrompt });
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: { parts },
+        config: {
+          systemInstruction: systemPrompt,
+          responseMimeType: "application/json",
+          temperature: 0.7,
         },
       });
-    }
-  }
 
-  parts.push({ text: userPrompt });
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3.7-flash",
-    contents: { parts },
-    config: {
-      systemInstruction: systemPrompt,
-      responseMimeType: "application/json",
-      temperature: 0.7,
+      const text = response.text ?? "{}";
+      try {
+        return JSON.parse(text) as T;
+      } catch (err) {
+        logfire.error("Failed to parse JSON response from skill AI", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        console.error("[Agent Skill] Failed to parse JSON response:", text, err);
+        throw new Error("AI skill output was not valid JSON.");
+      }
     },
   });
-
-  const text = response.text ?? "{}";
-  try {
-    return JSON.parse(text) as T;
-  } catch (err) {
-    console.error("[Agent Skill] Failed to parse JSON response:", text, err);
-    throw new Error("AI skill output was not valid JSON.");
-  }
 }
