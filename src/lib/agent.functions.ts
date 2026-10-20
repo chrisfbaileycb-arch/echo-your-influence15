@@ -45,7 +45,7 @@ const ExecuteActionInput = z.object({
 
 export const runAgentPrompt = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => AgentPromptInput.parse(d))
+  .validator((d: unknown) => AgentPromptInput.parse(d))
   .handler(async ({ data }) => {
     const { processAgentRequest } = await import("@/lib/agent.server");
     const result = await processAgentRequest({
@@ -58,7 +58,7 @@ export const runAgentPrompt = createServerFn({ method: "POST" })
 
 export const executeAgentActionFn = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => ExecuteActionInput.parse(d))
+  .validator((d: unknown) => ExecuteActionInput.parse(d))
   .handler(async ({ data, context }) => {
     const { executeSingleAction } = await import("@/lib/agent.server");
     const result = await executeSingleAction({
@@ -92,7 +92,7 @@ const ExecuteSkillInput = z.object({
 
 export const executeAgentSkillFn = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => ExecuteSkillInput.parse(d))
+  .validator((d: unknown) => ExecuteSkillInput.parse(d))
   .handler(async ({ data, context }) => {
     const { executeSkillDirectly } = await import("@/lib/agent.server");
     const result = await executeSkillDirectly(

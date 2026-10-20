@@ -1,3 +1,4 @@
+import { browserKeyHeaders } from "../browser-keys";
 import { createMiddleware } from "@tanstack/react-start";
 import { cloudAuth } from "./client";
 
@@ -5,7 +6,7 @@ export const attachCloudAuth = createMiddleware().client(async ({ next }) => {
   const { data } = await cloudAuth.getSession();
   const token = data.session?.access_token;
   return next({
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: { ...browserKeyHeaders(), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
   });
 });
 

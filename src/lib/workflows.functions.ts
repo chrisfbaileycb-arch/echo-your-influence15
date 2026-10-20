@@ -37,7 +37,7 @@ export const MAX_ACTIVE_CAMPAIGNS = 5;
 
 export const createWorkflow = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         name: z.string().trim().min(2).max(120),
@@ -85,7 +85,7 @@ export const createWorkflow = createServerFn({ method: "POST" })
 
 export const deleteWorkflow = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => Id.parse(d))
+  .validator((d: unknown) => Id.parse(d))
   .handler(async ({ data, context }) => {
     const { orgId, db } = await ctx(context.userId);
     await db.from("product_briefs").delete().eq("workflow_id", data.id).eq("org_id", orgId);
@@ -103,7 +103,7 @@ export const deleteWorkflow = createServerFn({ method: "POST" })
 
 export const getWorkflow = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => Id.parse(d))
+  .validator((d: unknown) => Id.parse(d))
   .handler(async ({ data, context }) => {
     const { orgId, db } = await ctx(context.userId);
     const { data: workflow } = await db
@@ -158,7 +158,7 @@ export const getWorkflow = createServerFn({ method: "POST" })
 
 export const saveBrief = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         workflow_id: z.string().uuid(),
@@ -210,7 +210,7 @@ export const saveBrief = createServerFn({ method: "POST" })
 /** Ingests a URL with the existing Firecrawl pipeline and pre-fills the brief. */
 export const ingestBriefFromUrl = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         workflow_id: z.string().uuid(),
@@ -268,7 +268,7 @@ export const ingestBriefFromUrl = createServerFn({ method: "POST" })
 
 export const generateStrategy = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { orgId, db } = await ctx(context.userId);
     const { generateStrategyOutput, STRATEGY_MODEL } = await import("@/lib/workflows.server");
@@ -311,7 +311,7 @@ export const generateStrategy = createServerFn({ method: "POST" })
 
 export const saveStrategy = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         workflow_id: z.string().uuid(),
@@ -351,7 +351,7 @@ export const saveStrategy = createServerFn({ method: "POST" })
 
 export const generateContentPack = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { orgId, db } = await ctx(context.userId);
     const { generateContentPackOutput, STRATEGY_MODEL } = await import("@/lib/workflows.server");
@@ -407,7 +407,7 @@ export const generateContentPack = createServerFn({ method: "POST" })
 /** Links an existing Campaign Kit (Studio) record to this workflow. */
 export const attachCampaignKit = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({ workflow_id: z.string().uuid(), campaign_id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -544,7 +544,7 @@ async function buildAnalytics(orgId: string, workflowId: string) {
 
 export const getCampaignAnalytics = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { orgId } = await ctx(context.userId);
     return buildAnalytics(orgId, data.workflow_id);
@@ -553,7 +553,7 @@ export const getCampaignAnalytics = createServerFn({ method: "POST" })
 /** Analyses the brief + strategy and returns a per-platform media plan with a real budget split. */
 export const generateChannelPlan = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         workflow_id: z.string().uuid(),

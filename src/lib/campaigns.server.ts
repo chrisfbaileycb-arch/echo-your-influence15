@@ -1,8 +1,8 @@
+import { textKey, textGateway, textModel, providerKey, requireProviderKey } from "./byok.server";
 // Server-only helpers for the multi-format Campaign Kit engine.
 import type { AssetKind } from "./ad-images.server";
 
-const AI_GATEWAY =
-  process.env.AI_GATEWAY_URL || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+
 
 export interface ExtractedAsset {
   title: string;
@@ -22,9 +22,9 @@ export interface AdCopy {
 }
 
 async function aiJson(body: Record<string, unknown>): Promise<string> {
-  const key = process.env["LOVABLE_API_KEY"];
-  if (!key) throw new Error("LOVABLE_API_KEY not configured");
-  const res = await fetch(`${AI_GATEWAY}/chat/completions`, {
+  const key = textKey();
+  if (!key) throw new Error("Connect an AI key in Settings → Integrations.");
+  const res = await fetch(`${textGateway()}/chat/completions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -39,7 +39,7 @@ async function aiJson(body: Record<string, unknown>): Promise<string> {
 }
 
 export async function scrapeSource(url: string): Promise<string> {
-  const key = process.env["FIRECRAWL_API_KEY"];
+  const key = providerKey("firecrawl");
   if (!key) throw new Error("Firecrawl is not connected");
   const res = await fetch("https://api.firecrawl.dev/v2/scrape", {
     method: "POST",
@@ -66,7 +66,7 @@ export async function extractAsset(
   kind: AssetKind,
 ): Promise<ExtractedAsset> {
   const content = await aiJson({
-    model: "google/gemini-3-flash-preview",
+    model: textModel(),
     messages: [
       {
         role: "system",
@@ -100,7 +100,7 @@ export async function generateAdCopy(
   kind: AssetKind,
 ): Promise<AdCopy> {
   const content = await aiJson({
-    model: "google/gemini-3-flash-preview",
+    model: textModel(),
     messages: [
       {
         role: "system",

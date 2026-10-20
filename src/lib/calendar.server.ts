@@ -1,8 +1,8 @@
+import { textKey, textGateway, textModel, providerKey, requireProviderKey } from "./byok.server";
 // Server-only prompt engineering for a single calendar day. Everything returned
 // is derived from the slot the user already filled in — no invented metrics,
 // testimonials, or results.
-const AI_GATEWAY =
-  process.env.AI_GATEWAY_URL || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+
 const MODEL = "google/gemini-3.6-flash";
 
 export const CALENDAR_PROMPT_MODEL = MODEL;
@@ -60,7 +60,7 @@ function strArray(v: unknown, max: number): string[] {
 }
 
 export async function generateDayPrompt(input: DayPromptInput): Promise<DayPromptOutput> {
-  const key = process.env["LOVABLE_API_KEY"];
+  const key = textKey();
   if (!key) throw new Error("LOVABLE_API_KEY is not configured.");
 
   const affiliate = input.affiliate !== false;
@@ -104,11 +104,11 @@ export async function generateDayPrompt(input: DayPromptInput): Promise<DayPromp
     voice: { niche: input.creator_niche ?? null, tone: input.creator_tone ?? null },
   });
 
-  const res = await fetch(`${AI_GATEWAY}/chat/completions`, {
+  const res = await fetch(`${textGateway()}/chat/completions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: MODEL,
+      model: textModel(),
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },

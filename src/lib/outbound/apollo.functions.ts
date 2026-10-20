@@ -178,7 +178,7 @@ const FiltersSchema = z.object({
 
 export const saveOutboundFilters = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({ workflow_id: z.string().uuid(), filters: FiltersSchema }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -195,7 +195,7 @@ export const saveOutboundFilters = createServerFn({ method: "POST" })
 /** Zero-credit preview. Nothing is persisted, no emails are returned by Apollo. */
 export const previewApolloSearch = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ filters: FiltersSchema }).parse(d))
+  .validator((d: unknown) => z.object({ filters: FiltersSchema }).parse(d))
   .handler(async ({ data, context }) => {
     const { orgId } = await ctx(context.userId);
     const apollo = await import("@/lib/outbound/apollo.server");
@@ -218,7 +218,7 @@ export const previewApolloSearch = createServerFn({ method: "POST" })
 /** Persists search results as leads. Repeat searches update, never duplicate. */
 export const sourceLeads = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         workflow_id: z.string().uuid(),
@@ -324,7 +324,7 @@ export const sourceLeads = createServerFn({ method: "POST" })
 
 export const qualifyLeads = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { orgId, db } = await ctx(context.userId);
     const { qualifyLeadsWithAi, STRATEGY_MODEL } = await import("@/lib/workflows.server");
@@ -379,7 +379,7 @@ export const qualifyLeads = createServerFn({ method: "POST" })
 /** Credit-consuming. Requires explicit confirmation from the UI. */
 export const enrichLeads = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         workflow_id: z.string().uuid(),
@@ -455,7 +455,7 @@ export const enrichLeads = createServerFn({ method: "POST" })
 
 export const saveSequenceDraft = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         workflow_id: z.string().uuid(),
@@ -523,7 +523,7 @@ export const saveSequenceDraft = createServerFn({ method: "POST" })
 
 export const generateSequenceCopy = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ workflow_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { orgId, db } = await ctx(context.userId);
     const { generateSequenceDraft } = await import("@/lib/workflows.server");
@@ -580,7 +580,7 @@ export const listApolloSendingOptions = createServerFn({ method: "POST" })
 /** Pushes the locally-saved sequence to Apollo, inactive by default. */
 export const pushSequenceToApollo = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         workflow_id: z.string().uuid(),
@@ -642,7 +642,7 @@ export const pushSequenceToApollo = createServerFn({ method: "POST" })
  */
 export const enrollLeads = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         workflow_id: z.string().uuid(),
@@ -773,7 +773,7 @@ export const enrollLeads = createServerFn({ method: "POST" })
 
 export const setSendingPaused = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({ workflow_id: z.string().uuid(), paused: z.boolean() }).parse(d),
   )
   .handler(async ({ data, context }) => {

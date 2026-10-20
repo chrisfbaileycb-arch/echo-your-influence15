@@ -1,3 +1,4 @@
+import { textKey, textGateway, textModel, providerKey, requireProviderKey } from "./byok.server";
 // Server-only helpers for the Ad Image Engine.
 
 export type Ratio = "1:1" | "9:16" | "16:9";
@@ -99,15 +100,15 @@ export function buildAdPrompt(
 /** Calls the AI Gateway images endpoint and returns raw PNG bytes. */
 export async function renderAdImage(prompt: string, ratio: Ratio): Promise<Uint8Array> {
   const key =
-    process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.LOVABLE_API_KEY;
+    requireProviderKey("openai");
   if (!key) throw new Error("AI API Key not configured (OPENAI_API_KEY or GEMINI_API_KEY)");
   const gateway =
-    process.env.AI_GATEWAY_URL || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+    "https://api.openai.com/v1";
   const res = await fetch(`${gateway}/images/generations`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "openai/gpt-image-2",
+      model: "gpt-image-1",
       prompt,
       size: RATIO_SIZE[ratio],
       quality: "low",

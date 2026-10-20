@@ -1,3 +1,4 @@
+import { providerKey } from "../byok.server";
 /**
  * Ayrshare adapter — multi-user SaaS sub-profile model.
  *
@@ -30,7 +31,7 @@ const API_BASE = "https://api.ayrshare.com/api";
 export const AYRSHARE_BLOCKER = "AYRSHARE_API_KEY";
 
 export function ayrshareConfigured(): boolean {
-  return Boolean(process.env["AYRSHARE_API_KEY"]);
+  return Boolean(providerKey("ayrshare"));
 }
 
 function blocked<T>(): AdapterResult<T> {
@@ -46,7 +47,7 @@ async function call<T>(
   path: string,
   init: { method: string; body?: unknown; profileRef?: string },
 ): Promise<AdapterResult<T>> {
-  const businessKey = process.env["AYRSHARE_API_KEY"];
+  const businessKey = providerKey("ayrshare");
   if (!businessKey) return blocked<T>();
 
   const headers: Record<string, string> = {

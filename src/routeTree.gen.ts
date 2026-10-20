@@ -24,12 +24,11 @@ import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermsRouteImport } from './routes/terms'
-import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAffiliateProgramsRouteImport } from './routes/_authenticated.affiliate-programs'
 import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated.billing'
 import { Route as AuthenticatedContentRouteImport } from './routes/_authenticated.content'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
+import { Route as AuthenticatedImpactRouteImport } from './routes/_authenticated.impact'
 import { Route as AuthenticatedIntakeRouteImport } from './routes/_authenticated.intake'
 import { Route as AuthenticatedPersonasRouteImport } from './routes/_authenticated.personas'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated.plan'
@@ -40,8 +39,6 @@ import { Route as AuthenticatedUpgradeRouteImport } from './routes/_authenticate
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
 import { Route as RCodeRouteImport } from './routes/r.$code'
-import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
-import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AuthenticatedCalendarIndexRouteImport } from './routes/_authenticated.calendar.index'
 import { Route as AuthenticatedCalendarDateRouteImport } from './routes/_authenticated.calendar.$date'
 import { Route as AuthenticatedCampaignsIndexRouteImport } from './routes/_authenticated.campaigns.index'
@@ -53,7 +50,11 @@ import { Route as AuthenticatedProductsNewRouteImport } from './routes/_authenti
 import { Route as AuthenticatedSettingsIntegrationsRouteImport } from './routes/_authenticated.settings.integrations'
 import { Route as AuthenticatedVideosIndexRouteImport } from './routes/_authenticated.videos.index'
 import { Route as AuthenticatedVideosIdRouteImport } from './routes/_authenticated.videos.$id'
+import { Route as ApiCloudAuthRouteImport } from './routes/api/cloud/auth'
 import { Route as ApiMediaVariantIdRouteImport } from './routes/api/media.$variantId'
+import { Route as ApiCloudDataTableRouteImport } from './routes/api/cloud/data.$table'
+import { Route as ApiCloudFunctionsTaskRouteImport } from './routes/api/cloud/functions.$task'
+import { Route as ApiCloudStorageBucketRouteImport } from './routes/api/cloud/storage.$bucket'
 import { Route as ApiPublicWebhooksStripeRouteImport } from './routes/api/public/webhooks.stripe'
 
 const IndexRoute = IndexRouteImport.update({
@@ -130,18 +131,6 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char91DotmcpChar93ListToolsRoute =
-  Char91DotmcpChar93ListToolsRouteImport.update({
-    id: '/.mcp/list-tools',
-    path: '/.mcp/list-tools',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const AuthenticatedAffiliateProgramsRoute =
   AuthenticatedAffiliateProgramsRouteImport.update({
     id: '/affiliate-programs',
@@ -161,6 +150,11 @@ const AuthenticatedContentRoute = AuthenticatedContentRouteImport.update({
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedImpactRoute = AuthenticatedImpactRouteImport.update({
+  id: '/impact',
+  path: '/impact',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedIntakeRoute = AuthenticatedIntakeRouteImport.update({
@@ -213,17 +207,6 @@ const RCodeRoute = RCodeRouteImport.update({
   path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const Char91DotmcpChar93InvokeToolToolRoute =
-  Char91DotmcpChar93InvokeToolToolRouteImport.update({
-    id: '/.mcp/invoke-tool/$tool',
-    path: '/.mcp/invoke-tool/$tool',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const AuthenticatedCalendarIndexRoute =
   AuthenticatedCalendarIndexRouteImport.update({
     id: '/calendar/',
@@ -288,9 +271,29 @@ const AuthenticatedVideosIdRoute = AuthenticatedVideosIdRouteImport.update({
   path: '/videos/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const ApiCloudAuthRoute = ApiCloudAuthRouteImport.update({
+  id: '/api/cloud/auth',
+  path: '/api/cloud/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMediaVariantIdRoute = ApiMediaVariantIdRouteImport.update({
   id: '/api/media/$variantId',
   path: '/api/media/$variantId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCloudDataTableRoute = ApiCloudDataTableRouteImport.update({
+  id: '/api/cloud/data/$table',
+  path: '/api/cloud/data/$table',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCloudFunctionsTaskRoute = ApiCloudFunctionsTaskRouteImport.update({
+  id: '/api/cloud/functions/$task',
+  path: '/api/cloud/functions/$task',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCloudStorageBucketRoute = ApiCloudStorageBucketRouteImport.update({
+  id: '/api/cloud/storage/$bucket',
+  path: '/api/cloud/storage/$bucket',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicWebhooksStripeRoute = ApiPublicWebhooksStripeRouteImport.update({
@@ -314,12 +317,11 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
-  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
-  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/affiliate-programs': typeof AuthenticatedAffiliateProgramsRoute
   '/billing': typeof AuthenticatedBillingRoute
   '/content': typeof AuthenticatedContentRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/impact': typeof AuthenticatedImpactRoute
   '/intake': typeof AuthenticatedIntakeRoute
   '/personas': typeof AuthenticatedPersonasRoute
   '/plan': typeof AuthenticatedPlanRoute
@@ -330,8 +332,6 @@ export interface FileRoutesByFullPath {
   '/checkout/return': typeof CheckoutReturnRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/r/$code': typeof RCodeRoute
-  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
-  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/calendar/$date': typeof AuthenticatedCalendarDateRoute
   '/campaigns/$id': typeof AuthenticatedCampaignsIdRoute
   '/media-plan/$id': typeof AuthenticatedMediaPlanIdRoute
@@ -339,11 +339,15 @@ export interface FileRoutesByFullPath {
   '/products/new': typeof AuthenticatedProductsNewRoute
   '/settings/integrations': typeof AuthenticatedSettingsIntegrationsRoute
   '/videos/$id': typeof AuthenticatedVideosIdRoute
+  '/api/cloud/auth': typeof ApiCloudAuthRoute
   '/api/media/$variantId': typeof ApiMediaVariantIdRoute
   '/calendar/': typeof AuthenticatedCalendarIndexRoute
   '/campaigns/': typeof AuthenticatedCampaignsIndexRoute
   '/products/': typeof AuthenticatedProductsIndexRoute
   '/videos/': typeof AuthenticatedVideosIndexRoute
+  '/api/cloud/data/$table': typeof ApiCloudDataTableRoute
+  '/api/cloud/functions/$task': typeof ApiCloudFunctionsTaskRoute
+  '/api/cloud/storage/$bucket': typeof ApiCloudStorageBucketRoute
   '/api/public/webhooks/stripe': typeof ApiPublicWebhooksStripeRoute
 }
 export interface FileRoutesByTo {
@@ -361,12 +365,11 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
-  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
-  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/affiliate-programs': typeof AuthenticatedAffiliateProgramsRoute
   '/billing': typeof AuthenticatedBillingRoute
   '/content': typeof AuthenticatedContentRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/impact': typeof AuthenticatedImpactRoute
   '/intake': typeof AuthenticatedIntakeRoute
   '/personas': typeof AuthenticatedPersonasRoute
   '/plan': typeof AuthenticatedPlanRoute
@@ -377,8 +380,6 @@ export interface FileRoutesByTo {
   '/checkout/return': typeof CheckoutReturnRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/r/$code': typeof RCodeRoute
-  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
-  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/calendar/$date': typeof AuthenticatedCalendarDateRoute
   '/campaigns/$id': typeof AuthenticatedCampaignsIdRoute
   '/media-plan/$id': typeof AuthenticatedMediaPlanIdRoute
@@ -386,11 +387,15 @@ export interface FileRoutesByTo {
   '/products/new': typeof AuthenticatedProductsNewRoute
   '/settings/integrations': typeof AuthenticatedSettingsIntegrationsRoute
   '/videos/$id': typeof AuthenticatedVideosIdRoute
+  '/api/cloud/auth': typeof ApiCloudAuthRoute
   '/api/media/$variantId': typeof ApiMediaVariantIdRoute
   '/calendar': typeof AuthenticatedCalendarIndexRoute
   '/campaigns': typeof AuthenticatedCampaignsIndexRoute
   '/products': typeof AuthenticatedProductsIndexRoute
   '/videos': typeof AuthenticatedVideosIndexRoute
+  '/api/cloud/data/$table': typeof ApiCloudDataTableRoute
+  '/api/cloud/functions/$task': typeof ApiCloudFunctionsTaskRoute
+  '/api/cloud/storage/$bucket': typeof ApiCloudStorageBucketRoute
   '/api/public/webhooks/stripe': typeof ApiPublicWebhooksStripeRoute
 }
 export interface FileRoutesById {
@@ -410,12 +415,11 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
-  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
-  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/affiliate-programs': typeof AuthenticatedAffiliateProgramsRoute
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
   '/_authenticated/content': typeof AuthenticatedContentRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/impact': typeof AuthenticatedImpactRoute
   '/_authenticated/intake': typeof AuthenticatedIntakeRoute
   '/_authenticated/personas': typeof AuthenticatedPersonasRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
@@ -426,8 +430,6 @@ export interface FileRoutesById {
   '/checkout/return': typeof CheckoutReturnRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/r/$code': typeof RCodeRoute
-  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
-  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/calendar/$date': typeof AuthenticatedCalendarDateRoute
   '/_authenticated/campaigns/$id': typeof AuthenticatedCampaignsIdRoute
   '/_authenticated/media-plan/$id': typeof AuthenticatedMediaPlanIdRoute
@@ -435,11 +437,15 @@ export interface FileRoutesById {
   '/_authenticated/products/new': typeof AuthenticatedProductsNewRoute
   '/_authenticated/settings/integrations': typeof AuthenticatedSettingsIntegrationsRoute
   '/_authenticated/videos/$id': typeof AuthenticatedVideosIdRoute
+  '/api/cloud/auth': typeof ApiCloudAuthRoute
   '/api/media/$variantId': typeof ApiMediaVariantIdRoute
   '/_authenticated/calendar/': typeof AuthenticatedCalendarIndexRoute
   '/_authenticated/campaigns/': typeof AuthenticatedCampaignsIndexRoute
   '/_authenticated/products/': typeof AuthenticatedProductsIndexRoute
   '/_authenticated/videos/': typeof AuthenticatedVideosIndexRoute
+  '/api/cloud/data/$table': typeof ApiCloudDataTableRoute
+  '/api/cloud/functions/$task': typeof ApiCloudFunctionsTaskRoute
+  '/api/cloud/storage/$bucket': typeof ApiCloudStorageBucketRoute
   '/api/public/webhooks/stripe': typeof ApiPublicWebhooksStripeRoute
 }
 export interface FileRouteTypes {
@@ -459,12 +465,11 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
-    | '/.mcp/list-tools'
-    | '/.well-known/oauth-protected-resource'
     | '/affiliate-programs'
     | '/billing'
     | '/content'
     | '/dashboard'
+    | '/impact'
     | '/intake'
     | '/personas'
     | '/plan'
@@ -475,8 +480,6 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/guides/$slug'
     | '/r/$code'
-    | '/.lovable/oauth/consent'
-    | '/.mcp/invoke-tool/$tool'
     | '/calendar/$date'
     | '/campaigns/$id'
     | '/media-plan/$id'
@@ -484,11 +487,15 @@ export interface FileRouteTypes {
     | '/products/new'
     | '/settings/integrations'
     | '/videos/$id'
+    | '/api/cloud/auth'
     | '/api/media/$variantId'
     | '/calendar/'
     | '/campaigns/'
     | '/products/'
     | '/videos/'
+    | '/api/cloud/data/$table'
+    | '/api/cloud/functions/$task'
+    | '/api/cloud/storage/$bucket'
     | '/api/public/webhooks/stripe'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -506,12 +513,11 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
-    | '/.mcp/list-tools'
-    | '/.well-known/oauth-protected-resource'
     | '/affiliate-programs'
     | '/billing'
     | '/content'
     | '/dashboard'
+    | '/impact'
     | '/intake'
     | '/personas'
     | '/plan'
@@ -522,8 +528,6 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/guides/$slug'
     | '/r/$code'
-    | '/.lovable/oauth/consent'
-    | '/.mcp/invoke-tool/$tool'
     | '/calendar/$date'
     | '/campaigns/$id'
     | '/media-plan/$id'
@@ -531,11 +535,15 @@ export interface FileRouteTypes {
     | '/products/new'
     | '/settings/integrations'
     | '/videos/$id'
+    | '/api/cloud/auth'
     | '/api/media/$variantId'
     | '/calendar'
     | '/campaigns'
     | '/products'
     | '/videos'
+    | '/api/cloud/data/$table'
+    | '/api/cloud/functions/$task'
+    | '/api/cloud/storage/$bucket'
     | '/api/public/webhooks/stripe'
   id:
     | '__root__'
@@ -554,12 +562,11 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
-    | '/.mcp/list-tools'
-    | '/.well-known/oauth-protected-resource'
     | '/_authenticated/affiliate-programs'
     | '/_authenticated/billing'
     | '/_authenticated/content'
     | '/_authenticated/dashboard'
+    | '/_authenticated/impact'
     | '/_authenticated/intake'
     | '/_authenticated/personas'
     | '/_authenticated/plan'
@@ -570,8 +577,6 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/guides/$slug'
     | '/r/$code'
-    | '/.lovable/oauth/consent'
-    | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/calendar/$date'
     | '/_authenticated/campaigns/$id'
     | '/_authenticated/media-plan/$id'
@@ -579,11 +584,15 @@ export interface FileRouteTypes {
     | '/_authenticated/products/new'
     | '/_authenticated/settings/integrations'
     | '/_authenticated/videos/$id'
+    | '/api/cloud/auth'
     | '/api/media/$variantId'
     | '/_authenticated/calendar/'
     | '/_authenticated/campaigns/'
     | '/_authenticated/products/'
     | '/_authenticated/videos/'
+    | '/api/cloud/data/$table'
+    | '/api/cloud/functions/$task'
+    | '/api/cloud/storage/$bucket'
     | '/api/public/webhooks/stripe'
   fileRoutesById: FileRoutesById
 }
@@ -603,13 +612,13 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
-  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
-  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   RCodeRoute: typeof RCodeRoute
-  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
-  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiCloudAuthRoute: typeof ApiCloudAuthRoute
   ApiMediaVariantIdRoute: typeof ApiMediaVariantIdRoute
+  ApiCloudDataTableRoute: typeof ApiCloudDataTableRoute
+  ApiCloudFunctionsTaskRoute: typeof ApiCloudFunctionsTaskRoute
+  ApiCloudStorageBucketRoute: typeof ApiCloudStorageBucketRoute
   ApiPublicWebhooksStripeRoute: typeof ApiPublicWebhooksStripeRoute
 }
 
@@ -720,20 +729,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.mcp/list-tools': {
-      id: '/.mcp/list-tools'
-      path: '/.mcp/list-tools'
-      fullPath: '/.mcp/list-tools'
-      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated/affiliate-programs': {
       id: '/_authenticated/affiliate-programs'
       path: '/affiliate-programs'
@@ -760,6 +755,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/impact': {
+      id: '/_authenticated/impact'
+      path: '/impact'
+      fullPath: '/impact'
+      preLoaderRoute: typeof AuthenticatedImpactRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/intake': {
@@ -830,20 +832,6 @@ declare module '@tanstack/react-router' {
       path: '/r/$code'
       fullPath: '/r/$code'
       preLoaderRoute: typeof RCodeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.lovable/oauth/consent': {
-      id: '/.lovable/oauth/consent'
-      path: '/.lovable/oauth/consent'
-      fullPath: '/.lovable/oauth/consent'
-      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.mcp/invoke-tool/$tool': {
-      id: '/.mcp/invoke-tool/$tool'
-      path: '/.mcp/invoke-tool/$tool'
-      fullPath: '/.mcp/invoke-tool/$tool'
-      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/calendar/': {
@@ -923,11 +911,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVideosIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/cloud/auth': {
+      id: '/api/cloud/auth'
+      path: '/api/cloud/auth'
+      fullPath: '/api/cloud/auth'
+      preLoaderRoute: typeof ApiCloudAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/media/$variantId': {
       id: '/api/media/$variantId'
       path: '/api/media/$variantId'
       fullPath: '/api/media/$variantId'
       preLoaderRoute: typeof ApiMediaVariantIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cloud/data/$table': {
+      id: '/api/cloud/data/$table'
+      path: '/api/cloud/data/$table'
+      fullPath: '/api/cloud/data/$table'
+      preLoaderRoute: typeof ApiCloudDataTableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cloud/functions/$task': {
+      id: '/api/cloud/functions/$task'
+      path: '/api/cloud/functions/$task'
+      fullPath: '/api/cloud/functions/$task'
+      preLoaderRoute: typeof ApiCloudFunctionsTaskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cloud/storage/$bucket': {
+      id: '/api/cloud/storage/$bucket'
+      path: '/api/cloud/storage/$bucket'
+      fullPath: '/api/cloud/storage/$bucket'
+      preLoaderRoute: typeof ApiCloudStorageBucketRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/webhooks/stripe': {
@@ -945,6 +961,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
   AuthenticatedContentRoute: typeof AuthenticatedContentRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedImpactRoute: typeof AuthenticatedImpactRoute
   AuthenticatedIntakeRoute: typeof AuthenticatedIntakeRoute
   AuthenticatedPersonasRoute: typeof AuthenticatedPersonasRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
@@ -970,6 +987,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedBillingRoute: AuthenticatedBillingRoute,
   AuthenticatedContentRoute: AuthenticatedContentRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedImpactRoute: AuthenticatedImpactRoute,
   AuthenticatedIntakeRoute: AuthenticatedIntakeRoute,
   AuthenticatedPersonasRoute: AuthenticatedPersonasRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,
@@ -1022,14 +1040,13 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
-  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
-  Char91DotwellKnownChar93OauthProtectedResourceRoute:
-    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   RCodeRoute: RCodeRoute,
-  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
-  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiCloudAuthRoute: ApiCloudAuthRoute,
   ApiMediaVariantIdRoute: ApiMediaVariantIdRoute,
+  ApiCloudDataTableRoute: ApiCloudDataTableRoute,
+  ApiCloudFunctionsTaskRoute: ApiCloudFunctionsTaskRoute,
+  ApiCloudStorageBucketRoute: ApiCloudStorageBucketRoute,
   ApiPublicWebhooksStripeRoute: ApiPublicWebhooksStripeRoute,
 }
 export const routeTree = rootRouteImport

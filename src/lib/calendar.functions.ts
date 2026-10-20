@@ -68,7 +68,7 @@ function normalize(row: Record<string, unknown>): CalendarSlot {
 /** Reads only real rows for the signed-in org. Nothing is seeded. */
 export const listCalendarSlots = createServerFn({ method: "GET" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ start: ISO_DATE, end: ISO_DATE }).parse(d))
+  .validator((d: unknown) => z.object({ start: ISO_DATE, end: ISO_DATE }).parse(d))
   .handler(async ({ data, context }): Promise<CalendarSlot[]> => {
     const { orgId, db } = await ctx(context.userId);
     const { data: rows, error } = await db
@@ -85,7 +85,7 @@ export const listCalendarSlots = createServerFn({ method: "GET" })
 
 export const getDaySlots = createServerFn({ method: "GET" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ date: ISO_DATE }).parse(d))
+  .validator((d: unknown) => z.object({ date: ISO_DATE }).parse(d))
   .handler(async ({ data, context }): Promise<CalendarSlot[]> => {
     const { orgId, db } = await ctx(context.userId);
     const { data: rows, error } = await db
@@ -100,7 +100,7 @@ export const getDaySlots = createServerFn({ method: "GET" })
 
 export const createCalendarSlot = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         plan_date: ISO_DATE,
@@ -137,7 +137,7 @@ export const createCalendarSlot = createServerFn({ method: "POST" })
 
 export const updateCalendarSlot = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         id: z.string().uuid(),
@@ -190,7 +190,7 @@ export const updateCalendarSlot = createServerFn({ method: "POST" })
 
 export const deleteCalendarSlot = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { orgId, db } = await ctx(context.userId);
     const { error } = await db
@@ -205,7 +205,7 @@ export const deleteCalendarSlot = createServerFn({ method: "POST" })
 /** Writes prompt fields for one slot using the product + notes already stored. */
 export const generateSlotPrompt = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<CalendarSlot> => {
     const { orgId, db } = await ctx(context.userId);
     const { generateDayPrompt, CALENDAR_PROMPT_MODEL } = await import("@/lib/calendar.server");

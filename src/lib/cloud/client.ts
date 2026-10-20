@@ -441,11 +441,11 @@ export class GoogleCloudClient {
           // Offline fallback response
         }
         return {
-          success: true,
+          success: false,
           task: payload.task,
           timestamp: new Date().toISOString(),
-          data: { status: "completed_offline_cache" },
-          logs: [`Task ${payload.task} executed via local Google Cloud ADK fallback`],
+          data: { status: "not_executed" },
+          logs: [`Task ${payload.task} did not complete. Check the workflow connection before retrying.`],
         };
       },
     };

@@ -25,7 +25,7 @@ export const listPrograms = createServerFn({ method: "GET" })
 
 export const upsertProgram = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => ProgramInput.parse(d))
+  .validator((d: unknown) => ProgramInput.parse(d))
   .handler(async ({ data, context }) => {
     const { cloud, userId } = context;
     if (data.id) {
@@ -49,7 +49,7 @@ export const upsertProgram = createServerFn({ method: "POST" })
 
 export const deleteProgram = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.cloud.from("affiliate_programs").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -66,7 +66,7 @@ function applyTemplate(template: string, productUrl: string, trackingId: string)
 
 export const createShortLink = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         product_id: z.string().uuid(),
@@ -112,7 +112,7 @@ export const createShortLink = createServerFn({ method: "POST" })
 
 export const listLinksForProduct = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ product_id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ product_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.cloud
       .from("affiliate_links")

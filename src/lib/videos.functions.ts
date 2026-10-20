@@ -1,3 +1,4 @@
+import { textKey, textGateway, textModel, providerKey, requireProviderKey } from "./byok.server";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
@@ -14,8 +15,7 @@ const BRollInput = z.object({
   style_note: z.string().max(400).optional(),
 });
 
-const AI_GATEWAY =
-  process.env.AI_GATEWAY_URL || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+
 const HEYGEN_API = "https://api.heygen.com";
 // Sensible defaults — overridable per persona.
 const DEFAULT_AVATAR = "Daisy-inskirt-20220818";
@@ -30,9 +30,9 @@ interface ScriptOut {
 }
 
 async function aiJson(body: Record<string, unknown>): Promise<string> {
-  const key = process.env["LOVABLE_API_KEY"];
-  if (!key) throw new Error("LOVABLE_API_KEY not configured");
-  const res = await fetch(`${AI_GATEWAY}/chat/completions`, {
+  const key = textKey();
+  if (!key) throw new Error("Connect an AI key in Settings → Integrations.");
+  const res = await fetch(`${textGateway()}/chat/completions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -67,7 +67,7 @@ async function generateScript(
     ? `You ARE ${persona.name}. Vibe: ${persona.vibe ?? "energetic"}. Voice tone: ${persona.voice_tone ?? "warm"}. Bio: ${persona.bio ?? ""}. Speech quirks: ${persona.speech_quirks ?? ""}. Naturally weave in 1 of these catchphrases if it fits: ${Array.isArray(persona.catchphrases) ? (persona.catchphrases as string[]).join(" | ") : ""}.`
     : "You are a 25-year-old female lifestyle influencer.";
   const content = await aiJson({
-    model: "google/gemini-3-flash-preview",
+    model: textModel(),
     messages: [
       {
         role: "system",
@@ -109,7 +109,7 @@ async function generateScript(
 /* ------------------------------------------------------------------ */
 
 async function heygen<T = unknown>(path: string, init?: RequestInit): Promise<T> {
-  const key = process.env["HEYGEN_API_KEY"];
+  const key = providerKey("heygen");
   if (!key) throw new Error("HEYGEN_API_KEY not configured");
   const res = await fetch(`${HEYGEN_API}${path}`, {
     ...init,
@@ -181,7 +181,7 @@ export const checkVideoProviderStatus = createServerFn({ method: "GET" })
     return {
       avatar: {
         provider: "heygen" as const,
-        configured: Boolean(process.env["HEYGEN_API_KEY"]),
+        configured: Boolean(providerKey("heygen")),
         remaining: avatarRemaining,
         low: avatarRemaining !== null && avatarRemaining < MIN_CREDITS,
         threshold: MIN_CREDITS,
@@ -189,7 +189,7 @@ export const checkVideoProviderStatus = createServerFn({ method: "GET" })
       },
       broll: {
         provider: "minimax" as const,
-        configured: Boolean(process.env["MINIMAX_API_KEY"]),
+        configured: Boolean(providerKey("minimax")),
       },
     };
   });
@@ -260,7 +260,7 @@ function quotaError(
 
 export const generateVideo = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => GenerateInput.parse(d))
+  .validator((d: unknown) => GenerateInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -417,7 +417,7 @@ export const generateVideo = createServerFn({ method: "POST" })
 
 export const generateBRollClip = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => BRollInput.parse(d))
+  .validator((d: unknown) => BRollInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -431,7 +431,7 @@ export const generateBRollClip = createServerFn({ method: "POST" })
     const { cloudAdmin } = await import("@/lib/cloud/client.server");
     const { PLAN_REQUIRED_MESSAGE } = await import("@/lib/plans");
 
-    if (!process.env["MINIMAX_API_KEY"])
+    if (!providerKey("minimax"))
       throw new Error("B-Roll studio is not configured (MINIMAX_API_KEY missing).");
 
     await assertRenderAllowed(cloudAdmin, userId, "broll");
@@ -524,7 +524,7 @@ export const listVideos = createServerFn({ method: "GET" })
 
 export const getVideoBundle = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: video, error } = await supabase
@@ -539,7 +539,7 @@ export const getVideoBundle = createServerFn({ method: "POST" })
 
 export const deleteVideo = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("videos").delete().eq("id", data.id);
     if (error) throw new Error(error.message);

@@ -4,7 +4,7 @@ import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
 
 export const startCampaign = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         url: z.string().url(),
@@ -75,7 +75,7 @@ export const startCampaign = createServerFn({ method: "POST" })
 
 export const generateCampaignImage = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         campaign_id: z.string().uuid(),
@@ -183,7 +183,7 @@ export const generateCampaignImage = createServerFn({ method: "POST" })
 
 export const attachCampaignVideo = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({ campaign_id: z.string().uuid(), video_id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -197,7 +197,7 @@ export const attachCampaignVideo = createServerFn({ method: "POST" })
 
 export const updateCampaign = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         id: z.string().uuid(),
@@ -232,7 +232,7 @@ export const listCampaigns = createServerFn({ method: "GET" })
 
 export const getCampaignKit = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: campaign, error } = await supabase
@@ -263,7 +263,7 @@ export const getCampaignKit = createServerFn({ method: "POST" })
 
 export const deleteCampaign = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("campaigns").delete().eq("id", data.id);
     if (error) throw new Error(error.message);

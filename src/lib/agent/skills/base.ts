@@ -1,3 +1,4 @@
+import { requireProviderKey, geminiModel } from "../../byok.server";
 import { GoogleGenAI } from "@google/genai";
 import type { AgentAction, AgentAttachment, AgentSkillId } from "../types";
 import { getLogfire } from "../../logfire.server";
@@ -52,24 +53,8 @@ export interface AgentSkillModule<TInput = Record<string, unknown>, TOutput = un
   ) => Promise<SkillResult<TOutput>>;
 }
 
-let genAIClient: GoogleGenAI | null = null;
-
 export function getGeminiClient(): GoogleGenAI {
-  if (!genAIClient) {
-    const key = process.env.GEMINI_API_KEY || process.env.LOVABLE_API_KEY;
-    if (!key) {
-      throw new Error("GEMINI_API_KEY is not configured.");
-    }
-    genAIClient = new GoogleGenAI({
-      apiKey: key,
-      httpOptions: {
-        headers: {
-          "User-Agent": "aistudio-build",
-        },
-      },
-    });
-  }
-  return genAIClient;
+  return new GoogleGenAI({ apiKey: requireProviderKey("gemini") });
 }
 
 /**
@@ -111,7 +96,7 @@ export async function callSkillAI<T>(
       parts.push({ text: userPrompt });
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.7-flash",
+        model: geminiModel(),
         contents: { parts },
         config: {
           systemInstruction: systemPrompt,

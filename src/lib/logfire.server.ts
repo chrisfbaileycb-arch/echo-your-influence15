@@ -1,23 +1,10 @@
-import * as logfire from "@pydantic/logfire-node";
-
-let isConfigured = false;
-
-export function getLogfire() {
-  if (!isConfigured) {
-    try {
-      logfire.configure({
-        serviceName: process.env.LOGFIRE_SERVICE_NAME || "starter-project",
-        environment: process.env.NODE_ENV || "development",
-        sendToLogfire: "if-token-present",
-        token: process.env.LOGFIRE_TOKEN,
-        console: process.env.NODE_ENV === "development" ? { format: "terminal" } : false,
-      });
-      isConfigured = true;
-    } catch (err) {
-      console.warn("Could not configure Logfire SDK:", err);
-    }
-  }
-  return logfire;
-}
-
-export { logfire };
+// Local-only diagnostics for the private BYOK workspace. No automatic HTTP
+// instrumentation: provider authorization headers must never be captured.
+export const logfire = {
+  async span<T>(_name: string, options: { attributes?: Record<string, unknown>; callback: () => T | Promise<T> }): Promise<T> {
+    return await options.callback();
+  },
+  info(message: string, _attributes?: Record<string, unknown>) { console.info(message); },
+  error(message: string, _attributes?: Record<string, unknown>) { console.error(message); },
+};
+export function getLogfire() { return logfire; }

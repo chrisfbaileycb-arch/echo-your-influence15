@@ -1,3 +1,4 @@
+import { textKey, textGateway, textModel, providerKey, requireProviderKey } from "./byok.server";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
@@ -22,7 +23,7 @@ const UrlInput = z.object({
 
 // --- Firecrawl scrape ---
 async function firecrawlScrape(url: string) {
-  const key = process.env.FIRECRAWL_API_KEY;
+  const key = providerKey("firecrawl");
   if (!key) throw new Error("Firecrawl is not connected");
   const res = await fetch("https://api.firecrawl.dev/v2/scrape", {
     method: "POST",
@@ -45,15 +46,15 @@ async function firecrawlScrape(url: string) {
 // --- AI extraction of product fields ---
 async function extractProductFields(markdown: string, sourceUrl: string) {
   const key =
-    process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.LOVABLE_API_KEY;
+    textKey();
   if (!key) throw new Error("AI API Key not configured (OPENAI_API_KEY or GEMINI_API_KEY)");
   const gateway =
-    process.env.AI_GATEWAY_URL || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+    textGateway();
   const res = await fetch(`${gateway}/chat/completions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: textModel(),
       messages: [
         {
           role: "system",
@@ -91,7 +92,7 @@ async function extractProductFields(markdown: string, sourceUrl: string) {
 
 export const ingestProduct = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => UrlInput.parse(d))
+  .validator((d: unknown) => UrlInput.parse(d))
   .handler(async ({ data, context }) => {
     const { cloud, userId } = context;
     const domain = new URL(data.url).hostname.replace(/^www\./, "");
@@ -129,7 +130,7 @@ export const ingestProduct = createServerFn({ method: "POST" })
  */
 export const createManualSubject = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         title: z.string().trim().min(2).max(160),
@@ -185,7 +186,7 @@ export const listProducts = createServerFn({ method: "GET" })
 
 export const getProduct = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.cloud
       .from("products")
@@ -199,7 +200,7 @@ export const getProduct = createServerFn({ method: "POST" })
 
 export const deleteProduct = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await context.cloud
       .from("product_briefs")

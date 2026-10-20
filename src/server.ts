@@ -1,3 +1,4 @@
+import { ownerGate } from "./lib/owner-gate.server";
 import "./lib/error-capture";
 import { getLogfire } from "./lib/logfire.server";
 
@@ -40,6 +41,8 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const gate = await ownerGate(request);
+    if (gate) return gate;
     const logfire = getLogfire();
     const url = new URL(request.url);
 

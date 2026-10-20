@@ -12,7 +12,7 @@ const GenerateInput = z.object({
 
 export const generateAdImage = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => GenerateInput.parse(d))
+  .validator((d: unknown) => GenerateInput.parse(d))
   .handler(async ({ data, context }) => {
     const { buildAdPrompt, renderAdImage, RATIO_SIZE } = await import("@/lib/ad-images.server");
     const { cloudAdmin } = await import("@/lib/cloud/client.server");
@@ -115,7 +115,7 @@ export const listAdImages = createServerFn({ method: "GET" })
 
 export const deleteAdImage = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { cloud } = context;
     const { data: row } = await cloud

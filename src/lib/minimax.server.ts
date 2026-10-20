@@ -1,3 +1,4 @@
+import { providerKey } from "./byok.server";
 // Server-only MiniMax (Hailuo) video generation client.
 // Replaces the previous HeyGen avatar pipeline.
 
@@ -15,7 +16,7 @@ export function minimaxClipSeconds(requested: number): 6 | 10 {
 }
 
 function apiKey(): string {
-  const key = process.env["MINIMAX_API_KEY"];
+  const key = providerKey("minimax");
   if (!key) throw new Error("MINIMAX_API_KEY not configured");
   return key;
 }

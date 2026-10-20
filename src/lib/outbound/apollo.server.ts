@@ -1,3 +1,4 @@
+import { requireProviderKey } from "../byok.server";
 /**
  * Server-only Apollo.io client.
  *
@@ -78,25 +79,8 @@ export interface ApolloResponse<T> {
 }
 
 /** Loads and decrypts the org's Apollo key. Never returned to callers. */
-export async function loadApolloKey(orgId: string): Promise<string> {
-  const { data } = await supabaseAdmin
-    .from("integration_credentials")
-    .select("ciphertext")
-    .eq("org_id", orgId)
-    .eq("category", "outbound")
-    .eq("provider", "apollo")
-    .maybeSingle();
-  if (!data?.ciphertext) {
-    throw new ApolloError("no_key", "No Apollo API key is saved for this workspace.");
-  }
-  try {
-    return decryptSecret(data.ciphertext);
-  } catch {
-    throw new ApolloError(
-      "no_key",
-      "The stored Apollo key could not be decrypted. Re-enter it in Integrations.",
-    );
-  }
+export async function loadApolloKey(_orgId: string): Promise<string> {
+  return requireProviderKey("apollo");
 }
 
 async function apolloRequest<T>(

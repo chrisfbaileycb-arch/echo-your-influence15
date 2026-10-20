@@ -91,7 +91,7 @@ export const getPublishingQueue = createServerFn({ method: "GET" })
 /** Creates a post plus one variant per platform from an existing campaign. */
 export const queueCampaignForPublishing = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         campaign_id: z.string().uuid(),
@@ -110,7 +110,7 @@ const variantInput = z.object({ variant_id: z.string().uuid() });
 
 export const recordCaptionCopied = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => variantInput.parse(d))
+  .validator((d: unknown) => variantInput.parse(d))
   .handler(async ({ data, context }) => {
     const { patchVariant } = await import("@/lib/social/handoff.server");
     return patchVariant(context.userId, data.variant_id, {
@@ -122,7 +122,7 @@ export const recordCaptionCopied = createServerFn({ method: "POST" })
 /** Only called after navigator.share() RESOLVES. Never means "published". */
 export const recordHandoff = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => variantInput.parse(d))
+  .validator((d: unknown) => variantInput.parse(d))
   .handler(async ({ data, context }) => {
     const { patchVariant } = await import("@/lib/social/handoff.server");
     return patchVariant(context.userId, data.variant_id, {
@@ -133,7 +133,7 @@ export const recordHandoff = createServerFn({ method: "POST" })
 
 export const recordShareFailure = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => variantInput.extend({ reason: z.string().max(300) }).parse(d))
+  .validator((d: unknown) => variantInput.extend({ reason: z.string().max(300) }).parse(d))
   .handler(async ({ data, context }) => {
     const { patchVariant } = await import("@/lib/social/handoff.server");
     return patchVariant(context.userId, data.variant_id, {
@@ -146,7 +146,7 @@ export const recordShareFailure = createServerFn({ method: "POST" })
 /** Explicit human confirmation. The only path to "Posted". */
 export const markVariantPosted = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     variantInput.extend({ external_post_url: z.string().url().nullable().optional() }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -167,7 +167,7 @@ export const markVariantPosted = createServerFn({ method: "POST" })
 
 export const undoPostConfirmation = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => variantInput.parse(d))
+  .validator((d: unknown) => variantInput.parse(d))
   .handler(async ({ data, context }) => {
     const { patchVariant } = await import("@/lib/social/handoff.server");
     return patchVariant(context.userId, data.variant_id, {
@@ -185,7 +185,7 @@ export const undoPostConfirmation = createServerFn({ method: "POST" })
 
 export const markVariantSkipped = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => variantInput.parse(d))
+  .validator((d: unknown) => variantInput.parse(d))
   .handler(async ({ data, context }) => {
     const { patchVariant } = await import("@/lib/social/handoff.server");
     return patchVariant(context.userId, data.variant_id, {
@@ -197,7 +197,7 @@ export const markVariantSkipped = createServerFn({ method: "POST" })
 
 export const setNotificationPreferences = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         due_reminders_enabled: z.boolean(),

@@ -1,24 +1,24 @@
+import { textKey, textGateway, textModel, providerKey, requireProviderKey } from "./byok.server";
 // Server-only AI helpers for the unified campaign spine. Outputs are persisted
 // verbatim by the calling server function — nothing here is invented for demo.
-const AI_GATEWAY =
-  process.env.AI_GATEWAY_URL || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+
 const MODEL = "google/gemini-3.6-flash";
 
 async function aiJson(system: string, user: string): Promise<Record<string, unknown>> {
   const key =
-    process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("AI API Key is not configured (OPENAI_API_KEY or GEMINI_API_KEY).");
+    textKey();
+  if (!key) throw new Error("Connect an AI key in Settings → Integrations.");
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 60_000);
 
   try {
-    const res = await fetch(`${AI_GATEWAY}/chat/completions`, {
+    const res = await fetch(`${textGateway()}/chat/completions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       signal: controller.signal,
       body: JSON.stringify({
-        model: MODEL,
+        model: textModel(),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: system },

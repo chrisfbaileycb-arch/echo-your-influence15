@@ -1,3 +1,5 @@
+import { readBrowserKeys, saveBrowserKeys } from "@/lib/browser-keys";
+import { BrowserKeySettings } from "@/components/BrowserKeySettings";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -38,7 +40,7 @@ export const Route = createFileRoute("/_authenticated/settings/integrations")({
       {
         name: "description",
         content:
-          "Connect your outbound sending provider and your own social accounts. Credentials stay encrypted and server-side.",
+          "Connect your outbound sending provider and your own social accounts. Provider keys stay in your browser session.",
       },
     ],
   }),
@@ -70,16 +72,8 @@ function IntegrationsPage() {
         </p>
       </header>
 
-      {data && !data.encryptionConfigured ? (
-        <Alert variant="destructive" data-testid="encryption-blocker">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Credential encryption is not configured</AlertTitle>
-          <AlertDescription>
-            Add <code className="font-mono">INTEGRATION_ENCRYPTION_KEY</code> in Project Settings →
-            Secrets. Until then, saving a provider key is refused rather than stored unprotected.
-          </AlertDescription>
-        </Alert>
-      ) : null}
+      <BrowserKeySettings />
+
 
       <Tabs defaultValue="outbound">
         <TabsList>
@@ -182,7 +176,11 @@ function ProviderCard({
   const beta = provider.availability === "beta";
 
   const saveMutation = useMutation({
-    mutationFn: () => save({ data: { provider: provider.id, apiKey } }),
+    mutationFn: async () => {
+      if (provider.id !== "apollo") throw new Error("This provider is not enabled for browser-session keys yet. Use Apollo above.");
+      saveBrowserKeys({ ...readBrowserKeys(), apollo: apiKey.trim() });
+      return { notice: "Apollo key saved for this browser session only; validate it before use." };
+    },
     onSuccess: (r) => {
       setApiKey("");
       toast.success(r.notice);

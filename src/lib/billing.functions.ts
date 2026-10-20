@@ -37,7 +37,7 @@ async function resolveOrCreateCustomer(
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: { priceId: string; returnUrl: string; environment: StripeEnv }) => {
+  .validator((d: { priceId: string; returnUrl: string; environment: StripeEnv }) => {
     if (!/^[a-zA-Z0-9_-]+$/.test(d.priceId)) throw new Error("Invalid priceId");
     return d;
   })
@@ -79,7 +79,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: { returnUrl: string; environment: StripeEnv }) => d)
+  .validator((d: { returnUrl: string; environment: StripeEnv }) => d)
   .handler(async ({ data, context }): Promise<{ url: string } | { error: string }> => {
     try {
       const stripe = createStripeClient(data.environment);
@@ -141,7 +141,7 @@ export const getMySubscription = createServerFn({ method: "GET" })
 
 export const syncSubscriptionFromStripe = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: { sessionId: string; environment: StripeEnv }) =>
+  .validator((d: { sessionId: string; environment: StripeEnv }) =>
     z
       .object({
         sessionId: z.string().min(1),

@@ -14,32 +14,7 @@ export class GoogleCloudADKPipeline {
 
     switch (payload.task) {
       case "post_scheduling": {
-        logs.push(`[ADK Pipeline] Sweeping scheduled posts across social networks...`);
-        const slots = cloudStore.getCollection("calendar_slots");
-        const pendingSlots = slots.filter(
-          (s) => s.status === "scheduled" && new Date(s.scheduled_for) <= new Date(),
-        );
-
-        let publishedCount = 0;
-        for (const slot of pendingSlots) {
-          slot.status = "published";
-          slot.updated_at = new Date().toISOString();
-          publishedCount++;
-          logs.push(`[ADK Pipeline] Published post slot ${slot.id} for platform: ${slot.platform}`);
-        }
-        cloudStore.setCollection("calendar_slots", slots);
-
-        return {
-          success: true,
-          task: payload.task,
-          timestamp,
-          data: {
-            publishedCount,
-            totalPending: pendingSlots.length,
-            nextRunInMinutes: 15,
-          },
-          logs,
-        };
+        throw new Error("No publishing worker is connected. No posts were published. Use the Publishing workflow to review and submit an action.");
       }
 
       case "analytics_sweep": {
@@ -66,8 +41,8 @@ export class GoogleCloudADKPipeline {
             totalClicks,
             activeLinks,
             liveCampaigns,
-            topPerformingDomains: ["tiktok.com", "instagram.com", "youtube.com"],
-            aggregateRoiMultiplier: 3.42,
+            topPerformingDomains: [],
+            aggregateRoiMultiplier: null,
           },
           logs,
         };
@@ -95,27 +70,16 @@ export class GoogleCloudADKPipeline {
             campaignsCount: userCampaigns.length,
             videosCount: userVideos.length,
             imagesCount: userImages.length,
-            attributionStatus: "healthy",
-            latencyMs: 18,
+            attributionStatus: "not_verified",
+            latencyMs: null,
           },
           logs,
         };
       }
 
       case "adk_execute":
-      default: {
-        logs.push(`[ADK Pipeline] Running generic orchestration cycle...`);
-        return {
-          success: true,
-          task: payload.task,
-          timestamp,
-          data: {
-            status: "orchestration_synced",
-            parameters: payload.parameters ?? {},
-          },
-          logs,
-        };
-      }
+      default:
+        throw new Error("Legacy ADK orchestration is not connected. No task was executed. Use Captain Echo’s in-app workflow actions.");
     }
   }
 }

@@ -1,3 +1,4 @@
+import { textKey, textGateway, textModel, providerKey, requireProviderKey } from "./byok.server";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireCloudAuth } from "@/lib/cloud/auth-middleware";
@@ -54,14 +55,13 @@ function pickAvatarAndVoice(traits: z.infer<typeof GenerateInput>): {
   return female25Bubbly;
 }
 
-const AI_GATEWAY =
-  process.env.AI_GATEWAY_URL || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+
 
 async function aiJson(body: Record<string, unknown>): Promise<string> {
   const key =
-    process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.LOVABLE_API_KEY;
+    textKey();
   if (!key) throw new Error("AI API Key not configured (OPENAI_API_KEY or GEMINI_API_KEY)");
-  const res = await fetch(`${AI_GATEWAY}/chat/completions`, {
+  const res = await fetch(`${textGateway()}/chat/completions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -89,12 +89,12 @@ export const listPersonas = createServerFn({ method: "GET" })
 
 export const generatePersona = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => GenerateInput.parse(d))
+  .validator((d: unknown) => GenerateInput.parse(d))
   .handler(async ({ data, context }) => {
     const { cloud, userId } = context;
 
     const content = await aiJson({
-      model: "google/gemini-3-flash-preview",
+      model: textModel(),
       messages: [
         {
           role: "system",
@@ -148,7 +148,7 @@ export const generatePersona = createServerFn({ method: "POST" })
 
 export const setDefaultPersona = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { cloud, userId } = context;
     await cloud.from("personas").update({ is_default: false }).eq("user_id", userId);
@@ -159,7 +159,7 @@ export const setDefaultPersona = createServerFn({ method: "POST" })
 
 export const deletePersona = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.cloud.from("personas").delete().eq("id", data.id);
     if (error) throw new Error(error.message);

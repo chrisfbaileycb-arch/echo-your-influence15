@@ -104,8 +104,9 @@ export const getIntegrationsOverview = createServerFn({ method: "GET" })
  */
 export const saveOutboundCredential = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => SaveCredentialInput.parse(d))
+  .validator((d: unknown) => SaveCredentialInput.parse(d))
   .handler(async ({ data, context }) => {
+    if (data.apiKey) throw new Error("Server credential storage is disabled. Save a browser-session key in Settings → Integrations.");
     if (!isActiveOutboundProvider(data.provider)) {
       throw new Error("Beta / In Development — Select Apollo or Instantly for active campaigns.");
     }
@@ -160,7 +161,7 @@ export const saveOutboundCredential = createServerFn({ method: "POST" })
 
 export const disconnectIntegration = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     ProviderInput.extend({ category: z.enum(["outbound", "social"]) }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -180,7 +181,7 @@ export const disconnectIntegration = createServerFn({ method: "POST" })
 /** Server-enforced: beta providers can never become the active provider. */
 export const setActiveOutboundProvider = createServerFn({ method: "POST" })
   .middleware([requireCloudAuth])
-  .inputValidator((d: unknown) => ProviderInput.parse(d))
+  .validator((d: unknown) => ProviderInput.parse(d))
   .handler(async ({ data, context }) => {
     if (!ACTIVE_OUTBOUND_PROVIDER_IDS.includes(data.provider as never)) {
       throw new Error("Beta / In Development — Select Apollo or Instantly for active campaigns.");

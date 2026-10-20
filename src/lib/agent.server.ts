@@ -1,3 +1,4 @@
+import { requireProviderKey, geminiModel } from "./byok.server";
 import { GoogleGenAI } from "@google/genai";
 import {
   type AgentAction,
@@ -11,24 +12,8 @@ import { getSkill, getAllSkills, matchSkillsForPrompt, executeSkillDirectly } fr
 import { cloudAdmin as supabaseAdmin } from "@/lib/cloud/client.server";
 import { getLogfire } from "./logfire.server";
 
-let genAIClient: GoogleGenAI | null = null;
-
-function getGeminiClient(): GoogleGenAI {
-  if (!genAIClient) {
-    const key = process.env.GEMINI_API_KEY || process.env.LOVABLE_API_KEY;
-    if (!key) {
-      throw new Error("GEMINI_API_KEY is not configured.");
-    }
-    genAIClient = new GoogleGenAI({
-      apiKey: key,
-      httpOptions: {
-        headers: {
-          "User-Agent": "aistudio-build",
-        },
-      },
-    });
-  }
-  return genAIClient;
+export function getGeminiClient(): GoogleGenAI {
+  return new GoogleGenAI({ apiKey: requireProviderKey("gemini") });
 }
 
 export { SKILL_REGISTRY, getSkill, getAllSkills, matchSkillsForPrompt, executeSkillDirectly };
@@ -198,7 +183,7 @@ Current User Workspace Context:
           },
           callback: async () => {
             return await ai.models.generateContent({
-              model: "gemini-3.7-flash",
+              model: geminiModel(),
               contents: {
                 parts,
               },
